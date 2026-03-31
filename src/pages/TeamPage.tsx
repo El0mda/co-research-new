@@ -67,7 +67,18 @@ const TeamPage: React.FC = () => {
 
   const sendMessage = () => {
     if (!newMsg.trim()) return;
-    showToast(t('toast.taskUpdated'));
+    const newMessage = {
+      id: `m${Date.now()}`,
+      senderId: 'r1',
+      text: newMsg,
+      textEn: newMsg,
+      timestamp: new Date().toISOString(),
+    };
+    setProjects(prev => prev.map(p =>
+      p.id === id
+        ? { ...p, messages: [...p.messages, newMessage] }
+        : p
+    ));
     setNewMsg('');
   };
 
