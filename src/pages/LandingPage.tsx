@@ -124,7 +124,7 @@ const LandingPage: React.FC = () => {
               animationDelay: "0.05s",
             }}
           >
-            {lang === "ar" ? "كو‑ريسيرش" : "Co-research"}
+            Co-research
           </h1>
 
           {/* Gold divider */}
