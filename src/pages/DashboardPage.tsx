@@ -4,14 +4,31 @@ import { useLang } from '@/contexts/LanguageContext';
 import { useApp } from '@/contexts/AppContext';
 import Header from '@/components/Header';
 import { showToast } from '@/components/ToastHelper';
-import { Plus, Search, Users, Calendar } from 'lucide-react';
+import { Plus, Search, Users, Calendar, X } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { t, lang } = useLang();
-  const { allProjects, user, allResearchers } = useApp();
+  const { allProjects, user, allResearchers, setProjects } = useApp();
   const [tab, setTab] = useState<'mine' | 'discover'>('mine');
   const [search, setSearch] = useState('');
   const [joinedIds, setJoinedIds] = useState<string[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Create team form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newTitleEn, setNewTitleEn] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newDescEn, setNewDescEn] = useState('');
+  const [newField, setNewField] = useState('');
+  const [newSubField, setNewSubField] = useState('');
+  const [newType, setNewType] = useState<'empirical' | 'mixed' | 'theoretical' | 'qualitative'>('empirical');
+  const [newMaxMembers, setNewMaxMembers] = useState('4');
+  const [newStartDate, setNewStartDate] = useState('');
+  const [newEndDate, setNewEndDate] = useState('');
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+
+  const fields = t('register.fields') as any as string[];
+  const typeOptions = ['empirical', 'mixed', 'theoretical', 'qualitative'] as const;
 
   const myProjects = allProjects.filter(p => p.members.includes(user.id));
   const discoverProjects = allProjects.filter(p => !p.members.includes(user.id) && p.status !== 'final');
@@ -27,6 +44,50 @@ const DashboardPage: React.FC = () => {
       case 'final': return 'bg-green-500/10 text-green-400';
       default: return 'bg-secondary text-muted-foreground';
     }
+  };
+
+  const handleCreateTeam = () => {
+    const errs: Record<string, string> = {};
+    if (!newTitle.trim()) errs.title = t('register.errors.required');
+    if (!newTitleEn.trim()) errs.titleEn = t('register.errors.required');
+    if (!newField) errs.field = t('register.errors.required');
+    if (!newStartDate) errs.startDate = t('register.errors.required');
+    if (!newEndDate) errs.endDate = t('register.errors.required');
+    setCreateErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    const newProject = {
+      id: `p${Date.now()}`,
+      title: newTitle,
+      titleEn: newTitleEn,
+      description: newDesc,
+      descriptionEn: newDescEn,
+      field: newField,
+      fieldEn: newField,
+      subField: newSubField,
+      subFieldEn: newSubField,
+      interests: [],
+      interestsEn: [],
+      type: newType,
+      status: 'idea' as const,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      maxMembers: parseInt(newMaxMembers) || 4,
+      members: [user.id],
+      leaderId: user.id,
+      completion: 0,
+      tasks: [],
+      messages: [],
+    };
+
+    setProjects(prev => [...prev, newProject]);
+    showToast(t('createTeamModal.created'));
+    setShowCreateModal(false);
+    // Reset form
+    setNewTitle(''); setNewTitleEn(''); setNewDesc(''); setNewDescEn('');
+    setNewField(''); setNewSubField(''); setNewType('empirical');
+    setNewMaxMembers('4'); setNewStartDate(''); setNewEndDate('');
+    setCreateErrors({});
   };
 
   return (
@@ -83,7 +144,6 @@ const DashboardPage: React.FC = () => {
                       <Users className="h-3.5 w-3.5" />
                       {p.members.length}/{p.maxMembers} {t('dashboard.members')}
                     </div>
-                    {/* Progress bar */}
                     <div className="mt-3 h-1.5 rounded-full bg-secondary overflow-hidden">
                       <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${p.completion}%` }} />
                     </div>
@@ -91,7 +151,10 @@ const DashboardPage: React.FC = () => {
                 ))}
               </div>
             )}
-            <button className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+            >
               <Plus className="h-4 w-4" />
               {t('dashboard.createTeam')}
             </button>
@@ -165,8 +228,81 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Create Team Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-heading text-xl font-bold">{t('createTeamModal.title')}</h2>
+              <button onClick={() => setShowCreateModal(false)}>
+                <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <ModalField label={t('createTeamModal.researchTitle')} error={createErrors.title}>
+                <input className="form-input" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+              </ModalField>
+              <ModalField label={t('createTeamModal.researchTitleEn')} error={createErrors.titleEn}>
+                <input className="form-input" value={newTitleEn} onChange={e => setNewTitleEn(e.target.value)} />
+              </ModalField>
+              <ModalField label={t('createTeamModal.description')}>
+                <textarea className="form-input min-h-[80px] resize-none" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
+              </ModalField>
+              <ModalField label={t('createTeamModal.descriptionEn')}>
+                <textarea className="form-input min-h-[80px] resize-none" value={newDescEn} onChange={e => setNewDescEn(e.target.value)} />
+              </ModalField>
+              <div className="grid grid-cols-2 gap-4">
+                <ModalField label={t('createTeamModal.field')} error={createErrors.field}>
+                  <select className="form-input" value={newField} onChange={e => setNewField(e.target.value)}>
+                    <option value=""></option>
+                    {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </ModalField>
+                <ModalField label={t('createTeamModal.subField')}>
+                  <input className="form-input" value={newSubField} onChange={e => setNewSubField(e.target.value)} />
+                </ModalField>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <ModalField label={t('createTeamModal.type')}>
+                  <select className="form-input" value={newType} onChange={e => setNewType(e.target.value as any)}>
+                    {typeOptions.map(tp => (
+                      <option key={tp} value={tp}>{t(`dashboard.type.${tp}`)}</option>
+                    ))}
+                  </select>
+                </ModalField>
+                <ModalField label={t('createTeamModal.maxMembers')}>
+                  <input className="form-input" type="number" min="2" max="20" value={newMaxMembers} onChange={e => setNewMaxMembers(e.target.value)} />
+                </ModalField>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <ModalField label={t('createTeamModal.startDate')} error={createErrors.startDate}>
+                  <input className="form-input" type="date" value={newStartDate} onChange={e => setNewStartDate(e.target.value)} />
+                </ModalField>
+                <ModalField label={t('createTeamModal.endDate')} error={createErrors.endDate}>
+                  <input className="form-input" type="date" value={newEndDate} onChange={e => setNewEndDate(e.target.value)} />
+                </ModalField>
+              </div>
+              <button
+                onClick={handleCreateTeam}
+                className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity mt-2"
+              >
+                {t('createTeamModal.create')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const ModalField: React.FC<{ label: string; error?: string; children: React.ReactNode }> = ({ label, error, children }) => (
+  <div>
+    <label className="block text-sm font-medium mb-1.5">{label}</label>
+    {children}
+    {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+  </div>
+);
 
 export default DashboardPage;
