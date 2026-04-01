@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useApp } from "@/contexts/AppContext";
 import Header from "@/components/Header";
-import { Upload, X, Plus } from "lucide-react";
+import { Upload, X, Plus, Loader2 } from "lucide-react";
 
 // ─── Academic domain validation ───────────────────────────────────────────────
 const ACADEMIC_DOMAIN_PATTERNS = [
@@ -86,6 +86,11 @@ const RegisterPage: React.FC = () => {
   // ── Verification ─────────────────────────────────────────────────────────────
   const [verificationCode, setVerificationCode] = useState("");
 
+  // ── Async state ───────────────────────────────────────────────────────────────
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(false);
+
   // ── Errors ────────────────────────────────────────────────────────────────────
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -157,17 +162,74 @@ const RegisterPage: React.FC = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validate(step)) return;
+    setApiError("");
+
     if (step === 3) {
-      // TODO: call send-verification-email API here
-      setStep(4);
+      setIsSubmitting(true);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName, displayName, email, password, country, nationalId,
+            emailType, employmentDoc, profilePhoto, field,
+            subField: isOtherSubField ? subFieldOther : subField,
+            degree, university, faculty, interests, orcid, scholar, scopus,
+            langPref, actionPref,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Registration failed");
+        setStep(4);
+      } catch (err: unknown) {
+        setApiError(err instanceof Error ? err.message : "Registration failed");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else if (step === 4) {
-      setIsLoggedIn(true);
-      navigate("/dashboard");
+      if (verificationCode.length < 6) {
+        setErrors({ verificationCode: t("register.errors.required") as string });
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const res = await fetch("/api/auth/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code: verificationCode }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Verification failed");
+        setIsLoggedIn(true);
+        navigate("/dashboard");
+      } catch (err: unknown) {
+        setApiError(err instanceof Error ? err.message : "Verification failed");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setStep((s) => s + 1);
     }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown) return;
+    setApiError("");
+    setResendCooldown(true);
+    try {
+      const res = await fetch("/api/auth/resend-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, langPref }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend");
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Failed to resend code");
+    }
+    setTimeout(() => setResendCooldown(false), 60000);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -739,11 +801,21 @@ const RegisterPage: React.FC = () => {
             </FormField>
             <button
               type="button"
-              onClick={() => setVerificationCode("")}
-              className="text-xs text-primary underline underline-offset-2 hover:opacity-75 transition-opacity"
+              onClick={handleResendCode}
+              disabled={resendCooldown}
+              className="text-xs text-primary underline underline-offset-2 hover:opacity-75 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {t("register.verify.resend") as string}
+              {resendCooldown
+                ? (t("register.verify.resendCooldown") as string) || "Resent! Try again in 1 min"
+                : (t("register.verify.resend") as string)}
             </button>
+          </div>
+        )}
+
+        {/* ── API Error ─────────────────────────────────────────────────────────── */}
+        {apiError && (
+          <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive text-center">
+            {apiError}
           </div>
         )}
 
@@ -753,7 +825,8 @@ const RegisterPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium hover:bg-secondary transition-colors"
+              disabled={isSubmitting}
+              className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
             >
               {t("register.prev") as string}
             </button>
@@ -763,8 +836,10 @@ const RegisterPage: React.FC = () => {
           <button
             type="button"
             onClick={handleNext}
-            className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-70"
           >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {step === 4
               ? (t("register.submit") as string)
               : step === 3
