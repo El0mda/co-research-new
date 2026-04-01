@@ -1,11 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
-import { researchers, projects, currentUser, type Researcher, type ResearchProject } from '@/data/mockData';
+import React, { createContext, useContext } from "react";
+import { useAuth, CurrentUser } from "@/contexts/AuthContext";
 
 interface AppContextType {
-  user: Researcher;
-  allResearchers: Researcher[];
-  allProjects: ResearchProject[];
-  setProjects: React.Dispatch<React.SetStateAction<ResearchProject[]>>;
+  user: CurrentUser | null;
   isLoggedIn: boolean;
   setIsLoggedIn: (v: boolean) => void;
 }
@@ -13,17 +10,13 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [allProjects, setProjects] = useState(projects);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, isLoggedIn, logout } = useAuth();
 
   return (
     <AppContext.Provider value={{
-      user: currentUser,
-      allResearchers: researchers,
-      allProjects,
-      setProjects,
+      user,
       isLoggedIn,
-      setIsLoggedIn,
+      setIsLoggedIn: (v: boolean) => { if (!v) logout(); },
     }}>
       {children}
     </AppContext.Provider>
@@ -32,6 +25,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  if (!ctx) throw new Error("useApp must be used within AppProvider");
   return ctx;
 };

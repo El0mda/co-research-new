@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import { Upload, X, Plus, Loader2 } from "lucide-react";
 
@@ -33,7 +33,7 @@ const toBase64 = (file: File): Promise<string> =>
 // ─── Component ────────────────────────────────────────────────────────────────
 const RegisterPage: React.FC = () => {
   const { t } = useLang();
-  const { setIsLoggedIn } = useApp();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
@@ -202,7 +202,7 @@ const RegisterPage: React.FC = () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Verification failed");
-        setIsLoggedIn(true);
+        login(data.token, data.user);
         navigate("/dashboard");
       } catch (err: unknown) {
         setApiError(err instanceof Error ? err.message : "Verification failed");
@@ -438,15 +438,6 @@ const RegisterPage: React.FC = () => {
               )}
             </div>
 
-            <div className="text-end">
-              <button
-                type="button"
-                onClick={() => navigate("/forgot-password")}
-                className="text-xs text-primary underline underline-offset-2 hover:opacity-75 transition-opacity"
-              >
-                {t("register.step1.forgotPassword") as string}
-              </button>
-            </div>
           </div>
         )}
 
