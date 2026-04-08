@@ -314,13 +314,9 @@ const TeamPage: React.FC = () => {
                       <label className="block text-xs font-medium mb-1.5 text-muted-foreground">{lang === "ar" ? "تاريخ الاستحقاق" : "Due Date"}</label>
                       <input type="date" className="form-input w-full" value={newTaskDue} onChange={(e) => setNewTaskDue(e.target.value)} />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1.5 text-muted-foreground">{lang === "ar" ? "الحالة" : "Status"}</label>
-                      <select className="form-input w-full" value={newTaskStatus} onChange={(e) => setNewTaskStatus(e.target.value as TaskStatus)}>
-                        <option value="in-progress">{t("team.inProgress")}</option>
-                        <option value="under-review">{t("team.underReview")}</option>
-                        <option value="completed">{t("team.completed")}</option>
-                      </select>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+                      <span>⠿</span>
+                      <span>{lang === "ar" ? "استخدم السحب والإفلات لتغيير حالة المهمة بعد إنشائها (تحت المراجعة / مكتملة)" : "Use drag & drop to move tasks to Under Review or Completed after creation"}</span>
                     </div>
                   </div>
                   <div className="flex gap-3 mt-6">

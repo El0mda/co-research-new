@@ -6,6 +6,7 @@ import taskRoutes from "./routes/tasks.js";
 import messageRoutes from "./routes/messages.js";
 import userRoutes from "./routes/users.js";
 import notificationRoutes from "./routes/notifications.js";
+import miscRoutes from "./routes/misc.js";
 
 const app = express();
 const PORT = 3001;
@@ -19,6 +20,7 @@ app.use("/api/projects/:projectId/tasks", taskRoutes);
 app.use("/api/projects/:projectId/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api", miscRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

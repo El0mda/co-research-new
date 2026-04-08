@@ -23,12 +23,17 @@ router.post("/", authenticate, async (req, res) => {
   if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
   try {
     const result = await pool.query(
-      `INSERT INTO tasks (project_id, title, description, assignee_id, due_date, status)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      `WITH inserted AS (
+        INSERT INTO tasks (project_id, title, description, assignee_id, due_date, status)
+        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
+       )
+       SELECT i.*, u.display_name AS assignee_name
+       FROM inserted i LEFT JOIN users u ON u.id = i.assignee_id`,
       [req.params.projectId, title, description || "", assigneeId || null, dueDate || null, status || "in-progress"]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to create task" });
   }
 });
@@ -37,13 +42,17 @@ router.patch("/:taskId", authenticate, async (req, res) => {
   const { status, title, description, assigneeId, dueDate } = req.body;
   try {
     const result = await pool.query(
-      `UPDATE tasks SET
-        status = COALESCE($1, status),
-        title = COALESCE($2, title),
-        description = COALESCE($3, description),
-        assignee_id = COALESCE($4, assignee_id),
-        due_date = COALESCE($5, due_date)
-       WHERE id = $6 AND project_id = $7 RETURNING *`,
+      `WITH updated AS (
+        UPDATE tasks SET
+          status = COALESCE($1, status),
+          title = COALESCE($2, title),
+          description = COALESCE($3, description),
+          assignee_id = COALESCE($4, assignee_id),
+          due_date = COALESCE($5, due_date)
+        WHERE id = $6 AND project_id = $7 RETURNING *
+       )
+       SELECT u.*, usr.display_name AS assignee_name
+       FROM updated u LEFT JOIN users usr ON usr.id = u.assignee_id`,
       [status, title, description, assigneeId, dueDate, req.params.taskId, req.params.projectId]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: "Task not found" });

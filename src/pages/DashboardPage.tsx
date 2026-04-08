@@ -134,7 +134,12 @@ const DashboardPage: React.FC = () => {
       setShowCreateModal(false);
       resetCreateForm();
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Failed to create project");
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("free_plan_limit")) {
+        showToast(lang === "ar" ? "الخطة المجانية تتيح إنشاء فريق بحثي واحد فقط. يرجى الترقية لإنشاء المزيد." : "Free plan allows only 1 research team. Please upgrade to create more.");
+      } else {
+        showToast(msg || "Failed to create project");
+      }
     } finally {
       setIsCreating(false);
     }

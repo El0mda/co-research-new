@@ -83,6 +83,15 @@ router.post("/", authenticate, async (req, res) => {
 
   if (!title || !titleEn) return res.status(400).json({ error: "Title is required" });
 
+  // Free plan: max 1 project as leader
+  const leaderCount = await pool.query(
+    "SELECT COUNT(*) FROM projects WHERE leader_id = $1",
+    [req.user.id]
+  );
+  if (parseInt(leaderCount.rows[0].count) >= 1) {
+    return res.status(403).json({ error: "free_plan_limit" });
+  }
+
   const resolvedType = type === "other" && otherType ? otherType : (type || "empirical");
   const lang = researchLang || "arabic";
   const questions = Array.isArray(joinQuestions) ? joinQuestions.filter(q => q.trim()) : [];
