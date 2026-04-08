@@ -1,7 +1,7 @@
 export const translations: Record<string, any> = {
   ar: {
     brand: "كو-ريسيرش",
-    brandEn: "Co-research",
+    brandEn: "Co-Research",
     tagline: "معًا يُصبح كل شيء أفضل",
     nav: {
       home: "الرئيسية",
@@ -13,36 +13,36 @@ export const translations: Record<string, any> = {
       langToggle: "EN",
     },
     hero: {
-      subtitle: "منصة التعاون البحثي الأكاديمي",
+      subtitle: "منصة للتعاون البحثي",
       cta: "ابدأ الآن",
       learnMore: "اعرف المزيد",
     },
     reasons: {
-      title: "لماذا كو-ريسيرش؟",
+      title: "لماذا Co-Research؟",
       items: [
         {
           title: "فرق بحثية متكاملة",
           desc: "كوّن فريقك البحثي من تخصصات متعددة لتحقيق أفضل النتائج",
         },
         {
-          title: "إدارة المهام الذكية",
+          title: "إدارة المهام بذكاء",
           desc: "وزّع المهام وتابع التقدم بلوحة كانبان متطورة",
         },
         {
           title: "حماية حقوق الباحثين",
-          desc: "جميع المحادثات والملفات محفوظة لضمان حقوق كل عضو",
+          desc: "جميع المحادثات والملفات محفوظة لضمان حقوق جميع الباحثين المشاركين",
         },
         {
           title: "ترتيب المؤلفين",
           desc: "نظام واضح لترتيب أسماء المؤلفين حسب المساهمة",
         },
         {
-          title: "اكتشاف الفرص",
-          desc: "تصفح مشاريع بحثية تبحث عن باحثين في تخصصك",
+          title: "اكتشاف الباحثين المناسبين",
+          desc: "اعثر على باحثين يشاركونك نفس الاهتمامات البحثية",
         },
         {
           title: "ملفات أكاديمية موثقة",
-          desc: "ملفات شخصية مرتبطة بـ ORCID و Google Scholar",
+          desc: "ملفات شخصية مرتبطة بإيميل جامعي وORCID وGoogle Scholar",
         },
         {
           title: "تواصل فعال",
@@ -176,7 +176,6 @@ export const translations: Record<string, any> = {
         "القانون",
         "الآداب",
       ],
-      // Sub-fields keyed by the Arabic field values above
       subFields: {
         "علوم الحاسب": [
           "الذكاء الاصطناعي",
@@ -249,23 +248,32 @@ export const translations: Record<string, any> = {
       noTeams: "لا توجد فرق بحثية بعد",
       noTeamsDesc: "أنشئ فريقك الأول أو انضم لفريق موجود",
       noResults: "لا توجد نتائج",
-      search: "ابحث عن مشاريع بحثية...",
+      search: "ابحث بعنوان البحث أو التخصص...",
       filters: "تصفية",
       requestJoin: "طلب الانضمام",
       requestSent: "تم إرسال الطلب",
       members: "أعضاء",
       completion: "مكتمل",
       slots: "مقاعد متاحة",
+      founderBy: "المؤسس",
       status: {
         idea: "فكرة",
         "in-progress": "قيد التنفيذ",
         final: "مكتمل",
       },
       type: {
+        field: "بحث ميداني",
+        experimental: "بحث تجريبي",
+        mixed: "بحث مزجي",
+        qualitative: "بحث نوعي",
+        quantitative: "بحث كمي",
+        book: "كتاب",
+        conference: "بحث مؤتمر",
+        review: "بحث مراجعة",
+        meta: "تحليل بعدي/ميتا",
+        other: "أخرى",
         empirical: "تجريبي",
-        mixed: "مختلط",
         theoretical: "نظري",
-        qualitative: "نوعي",
       },
     },
     team: {
@@ -307,9 +315,17 @@ export const translations: Record<string, any> = {
       field: "مجال البحث",
       subField: "التخصص الفرعي",
       type: "نوع البحث",
+      researchLang: "لغة البحث",
+      langArabic: "عربي",
+      langEnglish: "إنجليزي",
       maxMembers: "الحد الأقصى للأعضاء",
       startDate: "تاريخ البداية",
       endDate: "تاريخ النهاية",
+      joinQuestionsTitle: "أسئلة للمتقدمين",
+      joinQuestionsHint: "أضف أسئلة يجب على من يرغب في الانضمام الإجابة عليها",
+      addQuestion: "إضافة سؤال",
+      questionPlaceholder: "اكتب سؤالًا...",
+      otherType: "اذكر نوع البحث",
       create: "إنشاء الفريق",
       created: "تم إنشاء الفريق بنجاح",
     },
@@ -338,8 +354,8 @@ export const translations: Record<string, any> = {
   },
 
   en: {
-    brand: "Co-research",
-    brandEn: "Co-research",
+    brand: "Co-Research",
+    brandEn: "Co-Research",
     tagline: "Together, everything is better",
     nav: {
       home: "Home",
@@ -351,12 +367,12 @@ export const translations: Record<string, any> = {
       langToggle: "عربي",
     },
     hero: {
-      subtitle: "Academic Research Collaboration Platform",
+      subtitle: "Research Collaboration Platform",
       cta: "Get Started",
       learnMore: "Learn More",
     },
     reasons: {
-      title: "Why Co-research?",
+      title: "Why Co-Research?",
       items: [
         {
           title: "Integrated Research Teams",
@@ -368,19 +384,19 @@ export const translations: Record<string, any> = {
         },
         {
           title: "Protect Researcher Rights",
-          desc: "All conversations and files are preserved to protect every member",
+          desc: "All conversations and files are preserved to ensure the rights of all participating researchers",
         },
         {
           title: "Author Ordering",
           desc: "Clear system for ordering author names by contribution",
         },
         {
-          title: "Discover Opportunities",
-          desc: "Browse research projects looking for researchers in your field",
+          title: "Find the Right Researchers",
+          desc: "Find researchers who share your research interests",
         },
         {
           title: "Verified Academic Profiles",
-          desc: "Profiles linked to ORCID and Google Scholar",
+          desc: "Profiles linked to university email, ORCID and Google Scholar",
         },
         {
           title: "Effective Communication",
@@ -526,7 +542,6 @@ export const translations: Record<string, any> = {
         "Law",
         "Arts",
       ],
-      // Sub-fields keyed by the English field values above
       subFields: {
         "Computer Science": [
           "Artificial Intelligence",
@@ -599,23 +614,32 @@ export const translations: Record<string, any> = {
       noTeams: "No research teams yet",
       noTeamsDesc: "Create your first team or join an existing one",
       noResults: "No results found",
-      search: "Search research projects...",
+      search: "Search by title or specialization...",
       filters: "Filters",
       requestJoin: "Request to Join",
       requestSent: "Request Sent",
       members: "Members",
       completion: "Complete",
       slots: "slots available",
+      founderBy: "Founder",
       status: {
         idea: "Idea",
         "in-progress": "In Progress",
         final: "Completed",
       },
       type: {
-        empirical: "Empirical",
-        mixed: "Mixed",
-        theoretical: "Theoretical",
+        field: "Field Research",
+        experimental: "Experimental",
+        mixed: "Mixed Methods",
         qualitative: "Qualitative",
+        quantitative: "Quantitative",
+        book: "Book",
+        conference: "Conference Paper",
+        review: "Review Paper",
+        meta: "Meta-Analysis",
+        other: "Other",
+        empirical: "Empirical",
+        theoretical: "Theoretical",
       },
     },
     team: {
@@ -651,16 +675,24 @@ export const translations: Record<string, any> = {
     },
     createTeamModal: {
       title: "Create New Research Team",
-      researchTitle: "Research Title",
+      researchTitle: "Research Title (Arabic)",
       researchTitleEn: "Research Title (English)",
-      description: "Description",
+      description: "Description (Arabic)",
       descriptionEn: "Description (English)",
       field: "Research Field",
       subField: "Sub-specialization",
       type: "Research Type",
+      researchLang: "Research Language",
+      langArabic: "Arabic",
+      langEnglish: "English",
       maxMembers: "Max Members",
       startDate: "Start Date",
       endDate: "End Date",
+      joinQuestionsTitle: "Applicant Questions",
+      joinQuestionsHint: "Add questions that applicants must answer before joining",
+      addQuestion: "Add Question",
+      questionPlaceholder: "Type a question...",
+      otherType: "Specify research type",
       create: "Create Team",
       created: "Team created successfully",
     },

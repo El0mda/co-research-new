@@ -9,10 +9,12 @@ router.get("/", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        ARRAY_AGG(pm.user_id ORDER BY pm.member_order) FILTER (WHERE pm.user_id IS NOT NULL) AS member_ids
+        ARRAY_AGG(pm.user_id ORDER BY pm.member_order) FILTER (WHERE pm.user_id IS NOT NULL) AS member_ids,
+        u.display_name AS leader_name, u.profile_photo AS leader_photo
        FROM projects p
        LEFT JOIN project_members pm ON pm.project_id = p.id
-       GROUP BY p.id
+       LEFT JOIN users u ON u.id = p.leader_id
+       GROUP BY p.id, u.display_name, u.profile_photo
        ORDER BY p.created_at DESC`
     );
     res.json(result.rows);
@@ -76,21 +78,26 @@ router.post("/", authenticate, async (req, res) => {
   const {
     title, titleEn, description, descriptionEn,
     field, fieldEn, subField, subFieldEn,
-    type, startDate, endDate, maxMembers,
+    type, otherType, researchLang, joinQuestions, startDate, endDate, maxMembers,
   } = req.body;
 
   if (!title || !titleEn) return res.status(400).json({ error: "Title is required" });
+
+  const resolvedType = type === "other" && otherType ? otherType : (type || "empirical");
+  const lang = researchLang || "arabic";
+  const questions = Array.isArray(joinQuestions) ? joinQuestions.filter(q => q.trim()) : [];
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const projRes = await client.query(
       `INSERT INTO projects (title, title_en, description, description_en, field, field_en,
-        sub_field, sub_field_en, type, start_date, end_date, max_members, leader_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        sub_field, sub_field_en, type, research_lang, join_questions, start_date, end_date, max_members, leader_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [title, titleEn, description || "", descriptionEn || "",
        field || "", fieldEn || field || "", subField || "", subFieldEn || subField || "",
-       type || "empirical", startDate || null, endDate || null,
+       resolvedType, lang, questions,
+       startDate || null, endDate || null,
        parseInt(maxMembers) || 4, req.user.id]
     );
     const project = projRes.rows[0];
@@ -153,9 +160,23 @@ router.patch("/:id/members/reorder", authenticate, async (req, res) => {
   }
 });
 
+// ── Get project join questions (public, authenticated) ─────────────────────
+router.get("/:id/join-questions", authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT join_questions FROM projects WHERE id = $1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Project not found" });
+    res.json({ join_questions: result.rows[0].join_questions || [] });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch questions" });
+  }
+});
+
 // ── Join request ────────────────────────────────────────────────────────────
 router.post("/:id/join-request", authenticate, async (req, res) => {
-  const { message } = req.body;
+  const { message, answers } = req.body;
   try {
     const proj = await pool.query("SELECT * FROM projects WHERE id = $1", [req.params.id]);
     if (proj.rows.length === 0) return res.status(404).json({ error: "Project not found" });
@@ -166,10 +187,12 @@ router.post("/:id/join-request", authenticate, async (req, res) => {
     );
     if (already.rows.length > 0) return res.status(409).json({ error: "Already a member" });
 
+    const answerArr = Array.isArray(answers) ? answers : [];
+
     await pool.query(
-      `INSERT INTO join_requests (project_id, user_id, message) VALUES ($1, $2, $3)
-       ON CONFLICT (project_id, user_id) DO UPDATE SET status = 'pending', message = $3`,
-      [req.params.id, req.user.id, message || ""]
+      `INSERT INTO join_requests (project_id, user_id, message, answers) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (project_id, user_id) DO UPDATE SET status = 'pending', message = $3, answers = $4`,
+      [req.params.id, req.user.id, message || "", answerArr]
     );
     res.json({ success: true });
   } catch (err) {

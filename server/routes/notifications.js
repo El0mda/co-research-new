@@ -10,8 +10,10 @@ router.get("/", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT jr.id, jr.project_id, jr.user_id, jr.message, jr.status, jr.created_at,
+              jr.answers,
               u.display_name, u.email, u.field, u.sub_field, u.degree, u.university, u.profile_photo,
-              p.title AS project_title, p.title_en AS project_title_en
+              p.title AS project_title, p.title_en AS project_title_en,
+              p.join_questions
        FROM join_requests jr
        JOIN users u ON u.id = jr.user_id
        JOIN projects p ON p.id = jr.project_id

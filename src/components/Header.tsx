@@ -20,6 +20,8 @@ interface JoinNotification {
   profile_photo: string | null;
   project_title: string;
   project_title_en: string;
+  join_questions: string[] | null;
+  answers: string[] | null;
 }
 
 const Header: React.FC = () => {
@@ -205,6 +207,20 @@ const Header: React.FC = () => {
                                   </p>
                                 </div>
                               </div>
+
+                              {/* Q&A answers */}
+                              {notif.join_questions && notif.join_questions.length > 0 && (
+                                <div className="rounded-lg mb-3 p-3 space-y-2" style={{ background: "hsl(var(--secondary))" }}>
+                                  {notif.join_questions.map((q, qi) => (
+                                    <div key={qi}>
+                                      <p className="text-[11px] font-medium mb-0.5" style={{ color: "hsl(var(--navy))" }}>{q}</p>
+                                      <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                                        {notif.answers?.[qi] || (lang === "ar" ? "لا توجد إجابة" : "No answer provided")}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
 
                               {/* Message if any */}
                               {notif.message && (

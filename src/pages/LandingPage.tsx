@@ -106,7 +106,7 @@ const LandingPage: React.FC = () => {
               }}
             >
               {lang === "ar"
-                ? "منصة البحث العلمي التعاوني"
+                ? "منصة للتعاون البحثي"
                 : "Collaborative Research Platform"}
             </span>
           </div>
@@ -267,7 +267,7 @@ const LandingPage: React.FC = () => {
           {/* Section header */}
           <div className="text-center mb-16">
             <span className="section-label mb-4 inline-flex">
-              {lang === "ar" ? "لماذا كو-ريسيرش؟" : "Why Co-research?"}
+              {lang === "ar" ? "لماذا Co-Research؟" : "Why Co-Research?"}
             </span>
             <h2
               className="mt-4"
