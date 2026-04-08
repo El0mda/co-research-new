@@ -1,16 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bell, Menu, X, User, LogOut, ChevronDown } from "lucide-react";
+import { apiGet, apiPatch } from "@/lib/api";
+import { Bell, Menu, X, User, LogOut, ChevronDown, Check, Loader2, UserPlus } from "lucide-react";
+
+interface JoinNotification {
+  id: number;
+  project_id: number;
+  user_id: number;
+  message: string;
+  created_at: string;
+  display_name: string;
+  email: string;
+  field: string;
+  sub_field: string;
+  degree: string;
+  university: string;
+  profile_photo: string | null;
+  project_title: string;
+  project_title_en: string;
+}
 
 const Header: React.FC = () => {
-  const { t, toggleLang } = useLang();
+  const { t, toggleLang, lang } = useLang();
   const { isLoggedIn, user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [notifications, setNotifications] = useState<JoinNotification[]>([]);
+  const [processingIds, setProcessingIds] = useState<number[]>([]);
   const navigate = useNavigate();
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -18,11 +41,49 @@ const Header: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const data = await apiGet<JoinNotification[]>("/api/notifications");
+      setNotifications(data);
+    } catch {
+      // silently ignore
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
   const handleLogout = () => {
     logout();
     setDropdownOpen(false);
     setMobileOpen(false);
     navigate("/");
+  };
+
+  const handleAction = async (notif: JoinNotification, action: "approve" | "reject") => {
+    setProcessingIds((prev) => [...prev, notif.id]);
+    try {
+      await apiPatch(`/api/projects/${notif.project_id}/join-requests/${notif.id}`, { action });
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+    } catch {
+      // ignore
+    } finally {
+      setProcessingIds((prev) => prev.filter((id) => id !== notif.id));
+    }
   };
 
   const displayName = user?.display_name || "";
@@ -44,14 +105,11 @@ const Header: React.FC = () => {
           />
         </Link>
 
+        {/* ── Desktop nav ── */}
         <nav className="hidden md:flex items-center gap-7">
-          <Link to="/" className="header-nav-link">
-            {t("nav.home")}
-          </Link>
+          <Link to="/" className="header-nav-link">{t("nav.home")}</Link>
           {isLoggedIn && (
-            <Link to="/dashboard" className="header-nav-link">
-              {t("nav.dashboard")}
-            </Link>
+            <Link to="/dashboard" className="header-nav-link">{t("nav.dashboard")}</Link>
           )}
 
           <button
@@ -76,22 +134,141 @@ const Header: React.FC = () => {
 
           {isLoggedIn && user ? (
             <div className="flex items-center gap-3">
-              <button className="relative p-1.5 rounded-md hover:bg-secondary transition-colors">
-                <Bell className="h-[18px] w-[18px]" style={{ color: "hsl(var(--navy) / 0.5)" }} />
-              </button>
-
-              <div className="relative">
+              {/* ── Notification Bell ── */}
+              <div className="relative" ref={notifRef}>
                 <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
+                  className="relative p-1.5 rounded-md hover:bg-secondary transition-colors"
+                  data-testid="button-notifications"
+                >
+                  <Bell className="h-[18px] w-[18px]" style={{ color: "hsl(var(--navy) / 0.5)" }} />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-0.5 end-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "hsl(4 72% 50%)" }}>
+                      {notifications.length > 9 ? "9+" : notifications.length}
+                    </span>
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div
+                    className="absolute end-0 top-full mt-2 w-80 rounded-xl overflow-hidden animate-scale-in"
+                    style={{
+                      background: "white",
+                      border: "1px solid hsl(var(--border))",
+                      boxShadow: "0 8px 32px hsl(222 25% 12% / 0.14)",
+                    }}
+                  >
+                    <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                      <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--navy-deep))" }}>
+                        {lang === "ar" ? "طلبات الانضمام" : "Join Requests"}
+                      </h3>
+                      {notifications.length > 0 && (
+                        <span className="rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: "hsl(4 72% 50% / 0.1)", color: "hsl(4 72% 50%)" }}>
+                          {notifications.length} {lang === "ar" ? "جديد" : "new"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="max-h-[360px] overflow-y-auto divide-y divide-border">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                          <UserPlus className="h-8 w-8 text-muted-foreground mb-2 opacity-40" />
+                          <p className="text-sm text-muted-foreground">
+                            {lang === "ar" ? "لا توجد طلبات انضمام جديدة" : "No pending join requests"}
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((notif) => {
+                          const isProcessing = processingIds.includes(notif.id);
+                          const projectTitle = lang === "ar" ? notif.project_title : notif.project_title_en;
+                          return (
+                            <div key={notif.id} className="p-4">
+                              {/* Requester info */}
+                              <div className="flex items-start gap-3 mb-3">
+                                {notif.profile_photo ? (
+                                  <img src={notif.profile_photo} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                                ) : (
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: "hsl(var(--navy-deep))", color: "hsl(var(--gold))" }}>
+                                    {notif.display_name.charAt(0)}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold truncate" style={{ color: "hsl(var(--navy-deep))" }}>
+                                    {notif.display_name}
+                                  </p>
+                                  <p className="text-xs truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+                                    {notif.degree && `${notif.degree} · `}{notif.field}
+                                  </p>
+                                  <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                                    {lang === "ar" ? "يرغب في الانضمام إلى:" : "Wants to join:"}{" "}
+                                    <span className="font-medium" style={{ color: "hsl(var(--navy))" }}>{projectTitle}</span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Message if any */}
+                              {notif.message && (
+                                <div className="rounded-lg mb-3 px-3 py-2 text-xs" style={{ background: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" }}>
+                                  "{notif.message}"
+                                </div>
+                              )}
+
+                              {/* Approve / Reject buttons */}
+                              <div className="flex gap-2">
+                                <button
+                                  disabled={isProcessing}
+                                  onClick={() => handleAction(notif, "approve")}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-all disabled:opacity-50"
+                                  style={{ background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)", border: "1px solid hsl(142 71% 45% / 0.3)" }}
+                                  onMouseEnter={(e) => !isProcessing && (e.currentTarget.style.background = "hsl(142 71% 45% / 0.2)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "hsl(142 71% 45% / 0.12)")}
+                                  data-testid={`button-approve-${notif.id}`}
+                                >
+                                  {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                  {lang === "ar" ? "قبول" : "Approve"}
+                                </button>
+                                <button
+                                  disabled={isProcessing}
+                                  onClick={() => handleAction(notif, "reject")}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-all disabled:opacity-50"
+                                  style={{ background: "hsl(4 72% 50% / 0.08)", color: "hsl(4 72% 45%)", border: "1px solid hsl(4 72% 50% / 0.25)" }}
+                                  onMouseEnter={(e) => !isProcessing && (e.currentTarget.style.background = "hsl(4 72% 50% / 0.16)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "hsl(4 72% 50% / 0.08)")}
+                                  data-testid={`button-reject-${notif.id}`}
+                                >
+                                  {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                  {lang === "ar" ? "رفض" : "Reject"}
+                                </button>
+                              </div>
+
+                              {/* View profile link */}
+                              <Link
+                                to={`/profile/${notif.user_id}`}
+                                onClick={() => setNotifOpen(false)}
+                                className="mt-2 block text-center text-[11px] transition-opacity hover:opacity-75"
+                                style={{ color: "hsl(var(--primary))" }}
+                              >
+                                {lang === "ar" ? "عرض الملف الشخصي" : "View profile"}
+                              </Link>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── User dropdown ── */}
+              <div className="relative" ref={userRef}>
+                <button
+                  onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false); }}
                   className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-secondary"
                 >
                   {user.profile_photo ? (
                     <img src={user.profile_photo} alt="" className="h-8 w-8 rounded-full object-cover" />
                   ) : (
-                    <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold"
-                      style={{ background: "hsl(var(--navy-deep))", color: "hsl(var(--gold))" }}
-                    >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold" style={{ background: "hsl(var(--navy-deep))", color: "hsl(var(--gold))" }}>
                       {displayName.charAt(0)}
                     </div>
                   )}
@@ -100,29 +277,18 @@ const Header: React.FC = () => {
                   </span>
                   <ChevronDown
                     className="h-3.5 w-3.5 transition-transform duration-200"
-                    style={{
-                      color: "hsl(var(--muted-foreground))",
-                      transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    }}
+                    style={{ color: "hsl(var(--muted-foreground))", transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                   />
                 </button>
 
                 {dropdownOpen && (
                   <div
                     className="absolute end-0 top-full mt-2 w-52 rounded-xl p-1.5 animate-scale-in"
-                    style={{
-                      background: "white",
-                      border: "1px solid hsl(var(--border))",
-                      boxShadow: "0 8px 32px hsl(222 25% 12% / 0.12)",
-                    }}
+                    style={{ background: "white", border: "1px solid hsl(var(--border))", boxShadow: "0 8px 32px hsl(222 25% 12% / 0.12)" }}
                   >
                     <div className="px-3 py-2.5 mb-1" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                      <p className="text-[13px] font-semibold" style={{ color: "hsl(var(--navy-deep))" }}>
-                        {displayName}
-                      </p>
-                      <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        {user.university}
-                      </p>
+                      <p className="text-[13px] font-semibold" style={{ color: "hsl(var(--navy-deep))" }}>{displayName}</p>
+                      <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>{user.university}</p>
                     </div>
                     <Link
                       to={`/profile/${user.id}`}
@@ -147,11 +313,7 @@ const Header: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Link
-                to="/login"
-                className="text-sm font-medium transition-colors"
-                style={{ color: "hsl(var(--navy) / 0.65)" }}
-              >
+              <Link to="/login" className="text-sm font-medium transition-colors" style={{ color: "hsl(var(--navy) / 0.65)" }}>
                 {t("nav.signIn")}
               </Link>
               <Link to="/register" className="btn-primary text-sm" style={{ padding: "0.5rem 1.25rem" }}>
@@ -161,6 +323,7 @@ const Header: React.FC = () => {
           )}
         </nav>
 
+        {/* ── Mobile hamburger ── */}
         <button
           className="md:hidden p-2 rounded-md transition-colors hover:bg-secondary"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -168,11 +331,19 @@ const Header: React.FC = () => {
           {mobileOpen ? (
             <X className="h-5 w-5" style={{ color: "hsl(var(--navy))" }} />
           ) : (
-            <Menu className="h-5 w-5" style={{ color: "hsl(var(--navy))" }} />
+            <div className="relative">
+              <Menu className="h-5 w-5" style={{ color: "hsl(var(--navy))" }} />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -end-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "hsl(4 72% 50%)" }}>
+                  {notifications.length}
+                </span>
+              )}
+            </div>
           )}
         </button>
       </div>
 
+      {/* ── Mobile menu ── */}
       {mobileOpen && (
         <div className="md:hidden p-4 space-y-1 animate-fade-in" style={{ background: "white", borderTop: "1px solid hsl(var(--border))" }}>
           <MobileLink to="/" label={t("nav.home")} onClick={() => setMobileOpen(false)} />
@@ -186,6 +357,46 @@ const Header: React.FC = () => {
           >
             {t("nav.langToggle")}
           </button>
+
+          {/* Mobile notifications section */}
+          {isLoggedIn && notifications.length > 0 && (
+            <div className="rounded-lg border border-border p-3 mt-2">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">
+                {lang === "ar" ? "طلبات الانضمام" : "Join Requests"} ({notifications.length})
+              </p>
+              <div className="space-y-3">
+                {notifications.map((notif) => {
+                  const isProcessing = processingIds.includes(notif.id);
+                  const projectTitle = lang === "ar" ? notif.project_title : notif.project_title_en;
+                  return (
+                    <div key={notif.id} className="text-sm">
+                      <p className="font-medium">{notif.display_name}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{projectTitle}</p>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={isProcessing}
+                          onClick={() => handleAction(notif, "approve")}
+                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold"
+                          style={{ background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)" }}
+                        >
+                          {lang === "ar" ? "قبول" : "Approve"}
+                        </button>
+                        <button
+                          disabled={isProcessing}
+                          onClick={() => handleAction(notif, "reject")}
+                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold"
+                          style={{ background: "hsl(4 72% 50% / 0.08)", color: "hsl(4 72% 45%)" }}
+                        >
+                          {lang === "ar" ? "رفض" : "Reject"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {!isLoggedIn ? (
             <>
               <MobileLink to="/login" label={t("nav.signIn")} onClick={() => setMobileOpen(false)} />
