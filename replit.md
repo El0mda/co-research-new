@@ -1,65 +1,63 @@
 # Co-Research Hub
 
-A bilingual (Arabic/English) academic research collaboration platform.
+A bilingual (Arabic/English) academic research collaboration platform built with React + Express.js.
 
-## Tech Stack
+## Architecture
 
-- **Frontend**: React 18, TypeScript, Vite (port 5000)
-- **Backend**: Express.js (port 3001), proxied via Vite `/api/*`
-- **Database**: PostgreSQL (via `DATABASE_URL` env var)
-- **Routing**: React Router v6
-- **UI**: shadcn/ui, Tailwind CSS, Radix UI
-- **State**: TanStack React Query, React Context
-- **i18n**: Custom LanguageContext — Arabic + English (RTL supported)
-- **Auth**: JWT-like token stored in `localStorage` under `co_research_token`
+- **Frontend**: React 18 + TypeScript + Vite (port 5000)
+- **Backend**: Express.js API server (port 3001)
+- **Database**: PostgreSQL (Replit built-in, auto-connected via DATABASE_URL)
+- **Styling**: Tailwind CSS + shadcn/ui components
 
 ## Project Structure
 
 ```
-server/
-  index.js                 # Express entry point (port 3001)
-  db.js                    # PostgreSQL pool
-  email.js                 # Email via Resend (gracefully skipped if key missing)
-  middleware/auth.js       # Token authentication middleware
-  routes/
-    auth.js                # /api/auth/* (register, login, verify-email, logout, me, resend-code)
-    projects.js            # /api/projects/* (CRUD, join requests, member reorder)
-    tasks.js               # /api/projects/:id/tasks
-    messages.js            # /api/projects/:id/messages
-    users.js               # /api/users/:id
-
-src/
-  App.tsx                  # Routing + providers (AuthProvider, LanguageProvider)
-  contexts/
-    AuthContext.tsx         # Real auth: token + user state, login/logout
-    AppContext.tsx          # Thin wrapper kept for compatibility
-    LanguageContext.tsx     # AR/EN toggle
-  lib/api.ts               # apiGet/apiPost/apiPatch helpers (injects auth token)
-  pages/
-    LandingPage.tsx
-    LoginPage.tsx           # Real login via /api/auth/login
-    RegisterPage.tsx        # 4-step wizard → verify email → login
-    DashboardPage.tsx       # Live projects from /api/projects
-    TeamPage.tsx            # Live tasks, messages, members; drag-drop kanban
-    ProfilePage.tsx         # Live user profile from /api/users/:id
-    NotFound.tsx
-  data/mockData.ts          # Types only — no dummy data
-  i18n/                    # ar.json + en.json translation files
+/
+├── src/                    # React frontend
+│   ├── pages/              # Page-level components
+│   ├── components/         # Reusable UI components (including shadcn/ui)
+│   ├── contexts/           # Auth, Language, AppState contexts
+│   ├── assets/             # Images and static files (copied from attached_assets)
+│   ├── i18n/               # Arabic/English translations
+│   └── lib/api.ts          # API utility for authenticated requests
+├── server/                 # Express.js backend
+│   ├── index.js            # Entry point (port 3001)
+│   ├── db.js               # PostgreSQL pool connection
+│   ├── init-db.js          # Database schema initialization script
+│   ├── email.js            # Resend email integration
+│   ├── routes/             # API route handlers
+│   └── middleware/         # Auth middleware
+├── public/                 # Static public assets
+├── start.sh                # Startup script (init DB → start server → start Vite)
+└── vite.config.ts          # Vite config with @assets alias and API proxy
 ```
 
-## Running
+## Running the App
 
-```bash
-bash start.sh   # starts node server/index.js (port 3001) + vite (port 5000)
-```
+The app starts via `bash start.sh` which:
+1. Initializes database tables (CREATE TABLE IF NOT EXISTS)
+2. Starts the Express API server on port 3001
+3. Starts the Vite dev server on port 5000
 
-## Database Tables
+## Key Configuration
 
-`users`, `sessions`, `verification_codes`, `projects`, `project_members`, `tasks`, `messages`, `join_requests`
+- **Vite aliases**: `@` → `./src`, `@assets` → `./src/assets`
+- **API proxy**: Vite proxies `/api/*` to `http://localhost:3001`
+- **Database**: Auto-initialized on startup via `server/init-db.js`
 
-## Notes
+## Features
 
-- **Email**: If `RESEND_API_KEY` is not set, email sending is silently skipped but registration still works. Users can be verified by checking the verification code directly in the DB. Connect the Resend integration or set `RESEND_API_KEY` as a secret to enable real email delivery.
-- Auth token key in localStorage: `co_research_token`
-- All protected routes require `Authorization: Bearer <token>` header
-- The Vite dev server proxies `/api/*` to `localhost:3001`
+- User registration with 4-step wizard and email verification (Resend)
+- JWT-based sessions stored in PostgreSQL
+- Research project creation and management
+- Kanban task board with drag-and-drop
+- Real-time-like team messaging
+- Join request workflow with leader approval
+- Full RTL support for Arabic
+- Bilingual UI (Arabic/English)
+
+## Environment Variables
+
+- `DATABASE_URL` — PostgreSQL connection string (Replit-managed)
+- `RESEND_API_KEY` — For sending verification emails (optional, gracefully fails)
+- `SESSION_SECRET` — Session signing secret
