@@ -278,6 +278,30 @@ const TeamPage: React.FC = () => {
         {/* ══ TAB 1 — TASKS ══ */}
         {activeTab === 1 && (
           <div>
+            {/* Overdue banner */}
+            {(() => {
+              const today = new Date().toISOString().split("T")[0];
+              const overdueTasks = tasks.filter(tk => tk.due_date && tk.due_date < today && tk.status !== "completed");
+              if (overdueTasks.length === 0) return null;
+              return (
+                <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/40 dark:bg-red-900/20">
+                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                      {lang === "ar" ? `${overdueTasks.length} مهمة متأخرة عن موعدها` : `${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`}
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {overdueTasks.map(tk => (
+                        <li key={tk.id} className="text-xs text-red-600 dark:text-red-400">
+                          • {tk.title} {tk.assignee_name ? `(${tk.assignee_name})` : ""} — {lang === "ar" ? "استحقت في" : "due"} {tk.due_date}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })()}
+
             <button
               onClick={() => setShowNewTask(true)}
               className="mb-6 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
@@ -356,20 +380,27 @@ const TeamPage: React.FC = () => {
                     </div>
                   )}
                   <div className="space-y-3">
-                    {tasksByStatus[status].map((task) => (
+                    {tasksByStatus[status].map((task) => {
+                      const today = new Date().toISOString().split("T")[0];
+                      const isOverdue = task.due_date && task.due_date < today && task.status !== "completed";
+                      return (
                       <div
                         key={task.id}
                         draggable
                         onDragStart={() => setDraggingTaskId(task.id)}
                         onDragEnd={() => { setDraggingTaskId(null); setDragOverCol(null); }}
-                        className={`rounded-lg border border-border bg-card p-3 cursor-grab active:cursor-grabbing select-none card-hover transition-opacity ${draggingTaskId === task.id ? "opacity-40" : "opacity-100"}`}
+                        className={`rounded-lg border bg-card p-3 cursor-grab active:cursor-grabbing select-none card-hover transition-opacity ${draggingTaskId === task.id ? "opacity-40" : "opacity-100"} ${isOverdue ? "border-red-300 dark:border-red-700/60" : "border-border"}`}
                         onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
                       >
                         <div className="flex items-start justify-between mb-1">
                           <h4 className="text-sm font-medium flex-1">{task.title}</h4>
                           <span className="text-muted-foreground/30 text-xs ms-2 select-none">⠿</span>
                         </div>
-                        {task.due_date && <p className="text-xs text-muted-foreground">{task.due_date}</p>}
+                        {task.due_date && (
+                          <p className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+                            {isOverdue && "⚠ "}{task.due_date}
+                          </p>
+                        )}
                         {task.assignee_name && (
                           <div className="mt-2 flex items-center gap-1.5">
                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
@@ -382,7 +413,8 @@ const TeamPage: React.FC = () => {
                           <p className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">{task.description}</p>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
