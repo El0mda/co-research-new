@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch } from "@/lib/api";
-import { Bell, Menu, X, User, LogOut, ChevronDown, Check, Loader2, UserPlus } from "lucide-react";
+import { Bell, Menu, X, User, LogOut, ChevronDown, Check, Loader2, UserPlus, Clock, AlertCircle } from "lucide-react";
 
 interface JoinNotification {
   id: number;
@@ -24,14 +24,28 @@ interface JoinNotification {
   answers: string[] | null;
 }
 
+interface TaskNotification {
+  id: number;
+  title: string;
+  due_date: string;
+  status: string;
+  project_id: number;
+  project_title: string;
+  project_title_en: string;
+  assignee_name: string | null;
+  urgency: "overdue" | "upcoming";
+}
+
 const Header: React.FC = () => {
   const { t, toggleLang, lang } = useLang();
   const { isLoggedIn, user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifTab, setNotifTab] = useState<"join" | "tasks">("join");
   const [scrolled, setScrolled] = useState(false);
   const [notifications, setNotifications] = useState<JoinNotification[]>([]);
+  const [taskNotifications, setTaskNotifications] = useState<TaskNotification[]>([]);
   const [processingIds, setProcessingIds] = useState<number[]>([]);
   const navigate = useNavigate();
   const notifRef = useRef<HTMLDivElement>(null);
@@ -56,8 +70,12 @@ const Header: React.FC = () => {
   const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
-      const data = await apiGet<JoinNotification[]>("/api/notifications");
-      setNotifications(data);
+      const [joinData, taskData] = await Promise.all([
+        apiGet<JoinNotification[]>("/api/notifications"),
+        apiGet<TaskNotification[]>("/api/task-notifications"),
+      ]);
+      setNotifications(joinData);
+      setTaskNotifications(taskData);
     } catch {
       // silently ignore
     }
@@ -144,9 +162,9 @@ const Header: React.FC = () => {
                   data-testid="button-notifications"
                 >
                   <Bell className="h-[18px] w-[18px]" style={{ color: "hsl(var(--navy) / 0.5)" }} />
-                  {notifications.length > 0 && (
+                  {(notifications.length + taskNotifications.length) > 0 && (
                     <span className="absolute top-0.5 end-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "hsl(4 72% 50%)" }}>
-                      {notifications.length > 9 ? "9+" : notifications.length}
+                      {(notifications.length + taskNotifications.length) > 9 ? "9+" : (notifications.length + taskNotifications.length)}
                     </span>
                   )}
                 </button>
@@ -160,18 +178,92 @@ const Header: React.FC = () => {
                       boxShadow: "0 8px 32px hsl(222 25% 12% / 0.14)",
                     }}
                   >
-                    <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                      <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--navy-deep))" }}>
+                    {/* Tabs */}
+                    <div className="flex border-b border-border">
+                      <button
+                        onClick={() => setNotifTab("join")}
+                        className={`flex-1 py-2.5 text-xs font-semibold transition-colors relative ${notifTab === "join" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                      >
                         {lang === "ar" ? "طلبات الانضمام" : "Join Requests"}
-                      </h3>
-                      {notifications.length > 0 && (
-                        <span className="rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: "hsl(4 72% 50% / 0.1)", color: "hsl(4 72% 50%)" }}>
-                          {notifications.length} {lang === "ar" ? "جديد" : "new"}
-                        </span>
-                      )}
+                        {notifications.length > 0 && (
+                          <span className="ms-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "hsl(4 72% 50%)" }}>{notifications.length}</span>
+                        )}
+                        {notifTab === "join" && <div className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-full" />}
+                      </button>
+                      <button
+                        onClick={() => setNotifTab("tasks")}
+                        className={`flex-1 py-2.5 text-xs font-semibold transition-colors relative ${notifTab === "tasks" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {lang === "ar" ? "إشعارات المهام" : "Task Alerts"}
+                        {taskNotifications.length > 0 && (
+                          <span className="ms-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "hsl(4 72% 50%)" }}>{taskNotifications.length}</span>
+                        )}
+                        {notifTab === "tasks" && <div className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-full" />}
+                      </button>
                     </div>
 
                     <div className="max-h-[360px] overflow-y-auto divide-y divide-border">
+                      {/* ── Task notifications tab ── */}
+                      {notifTab === "tasks" && (
+                        <>
+                          {taskNotifications.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                              <Clock className="h-8 w-8 text-muted-foreground mb-2 opacity-40" />
+                              <p className="text-sm text-muted-foreground">
+                                {lang === "ar" ? "لا توجد مهام متأخرة أو قريبة الاستحقاق" : "No overdue or upcoming tasks"}
+                              </p>
+                            </div>
+                          ) : (
+                            taskNotifications.map((tn) => {
+                              const projTitle = lang === "ar" ? tn.project_title : tn.project_title_en;
+                              return (
+                                <div key={tn.id} className="p-4">
+                                  <div className="flex items-start gap-3">
+                                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${tn.urgency === "overdue" ? "bg-red-100" : "bg-yellow-100"}`}>
+                                      {tn.urgency === "overdue"
+                                        ? <AlertCircle className="h-4 w-4 text-red-500" />
+                                        : <Clock className="h-4 w-4 text-yellow-600" />
+                                      }
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold truncate">{tn.title}</p>
+                                      <p className="text-xs text-muted-foreground">{projTitle}</p>
+                                      <p className={`text-xs mt-0.5 font-medium ${tn.urgency === "overdue" ? "text-red-500" : "text-yellow-600"}`}>
+                                        {tn.urgency === "overdue"
+                                          ? (lang === "ar" ? `⚠ تأخرت عن ${tn.due_date}` : `⚠ Overdue since ${tn.due_date}`)
+                                          : (lang === "ar" ? `⏳ يستحق في ${tn.due_date}` : `⏳ Due ${tn.due_date}`)
+                                        }
+                                      </p>
+                                      {tn.assignee_name && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">{lang === "ar" ? "مسؤول:" : "Assigned to:"} {tn.assignee_name}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Link
+                                    to={`/team/${tn.project_id}`}
+                                    onClick={() => setNotifOpen(false)}
+                                    className="mt-2 block text-center text-[11px] transition-opacity hover:opacity-75"
+                                    style={{ color: "hsl(var(--primary))" }}
+                                  >
+                                    {lang === "ar" ? "فتح الفريق" : "Open Team"}
+                                  </Link>
+                                </div>
+                              );
+                            })
+                          )}
+                          {/* Drag-drop tip */}
+                          <div className="p-3 m-3 rounded-lg text-xs" style={{ background: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" }}>
+                            <span className="font-medium">{lang === "ar" ? "💡 نصيحة:" : "💡 Tip:"}</span>{" "}
+                            {lang === "ar"
+                              ? "استخدم السحب والإفلات لتغيير حالة المهام بين الأعمدة (قيد التنفيذ، تحت المراجعة، مكتملة)"
+                              : "Use drag & drop in the task board to move tasks between columns (In Progress, Under Review, Completed)"}
+                          </div>
+                        </>
+                      )}
+
+                      {/* ── Join requests tab ── */}
+                      {notifTab === "join" && (
+                      <>
                       {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 text-center px-4">
                           <UserPlus className="h-8 w-8 text-muted-foreground mb-2 opacity-40" />
@@ -269,6 +361,8 @@ const Header: React.FC = () => {
                             </div>
                           );
                         })
+                      )}
+                      </>
                       )}
                     </div>
                   </div>

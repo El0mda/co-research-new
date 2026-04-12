@@ -1,7 +1,40 @@
 import { Router } from "express";
 import pool from "../db.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = Router();
+
+// ── Task notifications (overdue + upcoming within 3 days) ──────────────────
+router.get("/task-notifications", authenticate, async (req, res) => {
+  try {
+    const upcoming = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    const result = await pool.query(
+      `SELECT t.id, t.title, t.due_date, t.status, t.assignee_id,
+              p.id AS project_id, p.title AS project_title, p.title_en AS project_title_en,
+              u.display_name AS assignee_name,
+              CASE WHEN t.due_date < $1 THEN 'overdue' ELSE 'upcoming' END AS urgency
+       FROM tasks t
+       JOIN projects p ON p.id = t.project_id
+       LEFT JOIN users u ON u.id = t.assignee_id
+       WHERE t.status != 'completed'
+         AND t.due_date IS NOT NULL
+         AND t.due_date <= $2
+         AND (
+           p.leader_id = $3
+           OR t.assignee_id = $3
+           OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = t.project_id AND pm.user_id = $3)
+         )
+       ORDER BY t.due_date ASC
+       LIMIT 15`,
+      [today, upcoming, req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch task notifications" });
+  }
+});
 
 // ── Advertise requests ──────────────────────────────────────────────────────
 router.post("/advertise", async (req, res) => {

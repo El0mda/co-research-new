@@ -687,8 +687,8 @@ const PricingCard: React.FC<{
     )}
     <h3 className="mb-1 text-[0.8125rem] font-bold tracking-[0.1em] uppercase" style={{ color: highlighted ? "hsl(var(--gold))" : "hsl(var(--muted-foreground))" }}>{name}</h3>
     <div className="mb-1 mt-2">
-      <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "2.75rem", fontWeight: 700, lineHeight: 1, color: highlighted ? "hsl(var(--navy-deep))" : "hsl(var(--foreground))" }}>{price}</span>
-      <span className="ms-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{currencyLabel}</span>
+      <span style={{ fontSize: "2.25rem", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.02em", color: highlighted ? "hsl(var(--navy-deep))" : "hsl(var(--foreground))" }}>{price}</span>
+      <span className="ms-1.5 text-sm font-semibold" style={{ color: "hsl(var(--muted-foreground))" }}>{currencyLabel}</span>
     </div>
     <p className="text-xs text-muted-foreground mb-6">/ {price === "0" ? (currency === "SAR" ? "مجاني" : "Free") : "year"}</p>
     <ul className="space-y-3 mb-8 flex-1">
