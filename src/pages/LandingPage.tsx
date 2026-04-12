@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 
-import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775985304705.jpeg";
+import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775985745503.jpeg";
 import r0Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_1775983076644.jpeg";
 import r1Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(1)_1775983076644.jpeg";
 import r2Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(2)_1775983076644.jpeg";
@@ -97,12 +97,7 @@ const LandingPage: React.FC = () => {
       <Header />
 
       {/* ══════════ HERO ══════════ */}
-      <section className="relative overflow-hidden" style={{ minHeight: "90vh", display: "flex", alignItems: "center" }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `url(${heroBgImg})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
-        <div className="absolute inset-0" style={{ background: "hsl(var(--navy-deep) / 0.45)" }} />
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, hsl(42 85% 50% / 0.15) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-        <div className="absolute pointer-events-none" style={{ top: "-10%", right: "-5%", width: "50vw", height: "60vh", background: "radial-gradient(ellipse, hsl(42 85% 50% / 0.08) 0%, transparent 70%)" }} />
-        <div className="absolute pointer-events-none" style={{ bottom: "-10%", left: "-5%", width: "40vw", height: "50vh", background: "radial-gradient(ellipse, hsl(222 52% 40% / 0.25) 0%, transparent 70%)" }} />
+      <section className="relative overflow-hidden" style={{ minHeight: "90vh", display: "flex", alignItems: "center", backgroundImage: "url('/hero-bg.jpeg')", backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}>
 
         <div className="container relative py-28 md:py-40 text-center">
           <div className="flex justify-center mb-8 animate-fade-in-up">
