@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 
-import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775983076644.jpeg";
+import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775984686001.jpeg";
 import r0Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_1775983076644.jpeg";
 import r1Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(1)_1775983076644.jpeg";
 import r2Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(2)_1775983076644.jpeg";
@@ -36,11 +36,11 @@ const FacebookIcon = () => (
 );
 
 const CURRENCIES = [
-  { code: "SAR", label: "ر.س (سعودي)", rate: 1 },
-  { code: "EGP", label: "ج.م (مصري)", rate: 14.3 },
-  { code: "AED", label: "د.إ (إماراتي)", rate: 1.0 },
-  { code: "KWD", label: "د.ك (كويتي)", rate: 0.33 },
-  { code: "USD", label: "$ (دولار)", rate: 0.27 },
+  { code: "SAR", labelAr: "ر.س (سعودي)", labelEn: "SAR (Saudi)", rate: 1 },
+  { code: "EGP", labelAr: "ج.م (مصري)", labelEn: "EGP (Egyptian)", rate: 14.3 },
+  { code: "AED", labelAr: "د.إ (إماراتي)", labelEn: "AED (Emirati)", rate: 1.0 },
+  { code: "KWD", labelAr: "د.ك (كويتي)", labelEn: "KWD (Kuwaiti)", rate: 0.33 },
+  { code: "USD", labelAr: "$ (دولار)", labelEn: "USD ($)", rate: 0.27 },
 ];
 
 const reasonIcons = [
@@ -247,7 +247,7 @@ const LandingPage: React.FC = () => {
               name={t("pricing.free.name") as string}
               price="0"
               currency={selectedCurr.code}
-              currencyLabel={selectedCurr.label.split(" ")[0]}
+              currencyLabel={lang === "ar" ? selectedCurr.labelAr.split(" ")[0] : selectedCurr.labelEn.split(" ")[0]}
               features={t("pricing.free.features") as any as string[]}
               cta={t("pricing.startFree") as string}
               highlighted={false}
@@ -257,7 +257,7 @@ const LandingPage: React.FC = () => {
               name={t("pricing.researcher.name") as string}
               price={convertPrice(parseFloat(t("pricing.researcher.priceAnnual") as string) * 12)}
               currency={selectedCurr.code}
-              currencyLabel={selectedCurr.label.split(" ")[0]}
+              currencyLabel={lang === "ar" ? selectedCurr.labelAr.split(" ")[0] : selectedCurr.labelEn.split(" ")[0]}
               features={t("pricing.researcher.features") as any as string[]}
               cta={t("pricing.subscribe") as string}
               highlighted={true}
@@ -268,7 +268,7 @@ const LandingPage: React.FC = () => {
               name={t("pricing.institution.name") as string}
               price={convertPrice(parseFloat(t("pricing.institution.priceAnnual") as string) * 12)}
               currency={selectedCurr.code}
-              currencyLabel={selectedCurr.label.split(" ")[0]}
+              currencyLabel={lang === "ar" ? selectedCurr.labelAr.split(" ")[0] : selectedCurr.labelEn.split(" ")[0]}
               features={t("pricing.institution.features") as any as string[]}
               cta={t("pricing.contactUs") as string}
               highlighted={false}
