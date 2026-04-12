@@ -16,7 +16,7 @@ import r8Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.18_PM_(1)_17759830
 import r9Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.19_PM_1775983076644.jpeg";
 import r10Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.26_PM_1775983076644.jpeg";
 
-const reasonImages = [r0Img, r1Img, r2Img, r3Img, r4Img, r5Img, r6Img, r7Img, r8Img, r9Img, r10Img];
+const reasonImages = [r3Img, r2Img, r8Img, r10Img, r0Img, r1Img, r9Img, r6Img, r4Img, r7Img, r5Img];
 import {
   BookOpen, Users, Shield, ListOrdered, Search, UserCheck,
   MessageCircle, Cloud, CreditCard, Globe, BarChart3, Check,
@@ -99,7 +99,7 @@ const LandingPage: React.FC = () => {
       {/* ══════════ HERO ══════════ */}
       <section className="relative overflow-hidden" style={{ minHeight: "90vh", display: "flex", alignItems: "center" }}>
         <div className="absolute inset-0" style={{ backgroundImage: `url(${heroBgImg})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
-        <div className="absolute inset-0" style={{ background: "hsl(var(--navy-deep) / 0.75)" }} />
+        <div className="absolute inset-0" style={{ background: "hsl(var(--navy-deep) / 0.45)" }} />
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, hsl(42 85% 50% / 0.15) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <div className="absolute pointer-events-none" style={{ top: "-10%", right: "-5%", width: "50vw", height: "60vh", background: "radial-gradient(ellipse, hsl(42 85% 50% / 0.08) 0%, transparent 70%)" }} />
         <div className="absolute pointer-events-none" style={{ bottom: "-10%", left: "-5%", width: "40vw", height: "50vh", background: "radial-gradient(ellipse, hsl(222 52% 40% / 0.25) 0%, transparent 70%)" }} />
