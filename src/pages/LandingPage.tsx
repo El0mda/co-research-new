@@ -2,6 +2,21 @@ import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
+
+import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775983076644.jpeg";
+import r0Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_1775983076644.jpeg";
+import r1Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(1)_1775983076644.jpeg";
+import r2Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(2)_1775983076644.jpeg";
+import r3Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_1775983076644.jpeg";
+import r4Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.17_PM_1775983076644.jpeg";
+import r5Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.17_PM_(1)_1775983076644.jpeg";
+import r6Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.17_PM_(2)_1775983076644.jpeg";
+import r7Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.18_PM_1775983076644.jpeg";
+import r8Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.18_PM_(1)_1775983076644.jpeg";
+import r9Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.19_PM_1775983076644.jpeg";
+import r10Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.26_PM_1775983076644.jpeg";
+
+const reasonImages = [r0Img, r1Img, r2Img, r3Img, r4Img, r5Img, r6Img, r7Img, r8Img, r9Img, r10Img];
 import {
   BookOpen, Users, Shield, ListOrdered, Search, UserCheck,
   MessageCircle, Cloud, CreditCard, Globe, BarChart3, Check,
