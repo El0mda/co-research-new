@@ -101,8 +101,10 @@ const LandingPage: React.FC = () => {
       <Header />
 
       {/* ══════════ HERO ══════════ */}
-      <section className="relative overflow-hidden" style={{ background: "hsl(var(--navy-deep))", minHeight: "90vh", display: "flex", alignItems: "center" }}>
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle, hsl(42 85% 50% / 0.15) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+      <section className="relative overflow-hidden" style={{ minHeight: "90vh", display: "flex", alignItems: "center" }}>
+        <div className="absolute inset-0" style={{ backgroundImage: `url(${heroBgImg})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
+        <div className="absolute inset-0" style={{ background: "hsl(var(--navy-deep) / 0.75)" }} />
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, hsl(42 85% 50% / 0.15) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <div className="absolute pointer-events-none" style={{ top: "-10%", right: "-5%", width: "50vw", height: "60vh", background: "radial-gradient(ellipse, hsl(42 85% 50% / 0.08) 0%, transparent 70%)" }} />
         <div className="absolute pointer-events-none" style={{ bottom: "-10%", left: "-5%", width: "40vw", height: "50vh", background: "radial-gradient(ellipse, hsl(222 52% 40% / 0.25) 0%, transparent 70%)" }} />
 
