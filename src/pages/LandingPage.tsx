@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 
-import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775984686001.jpeg";
+import heroBgImg from "@assets/WhatsApp_Image_2026-04-08_at_12.21.16_PM_(1)_1775985304705.jpeg";
 import r0Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_1775983076644.jpeg";
 import r1Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(1)_1775983076644.jpeg";
 import r2Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.15_PM_(2)_1775983076644.jpeg";
@@ -43,10 +43,6 @@ const CURRENCIES = [
   { code: "USD", labelAr: "$ (دولار)", labelEn: "USD ($)", rate: 0.27 },
 ];
 
-const reasonIcons = [
-  Users, Search, Shield, ListOrdered, BarChart3,
-  UserCheck, MessageCircle, Cloud, CreditCard, Globe, BarChart3,
-];
 
 const LandingPage: React.FC = () => {
   const { t, lang } = useLang();
@@ -173,28 +169,19 @@ const LandingPage: React.FC = () => {
 
           <div className="space-y-4">
             {reasons.map((item, i) => {
-              const Icon = reasonIcons[i] || BookOpen;
               const isEven = i % 2 === 0;
               const img = reasonImages[i];
               return (
-                <div key={i} className={`flex items-stretch gap-0 rounded-2xl overflow-hidden border border-border animate-fade-in-up ${isEven ? "flex-row" : "flex-row-reverse"}`} style={{ animationDelay: `${i * 0.05}s`, minHeight: "130px" }}>
-                  <div className="flex-shrink-0 flex flex-col items-center justify-center gap-3 px-6 py-6" style={{ width: "130px", background: "hsl(var(--navy-deep))" }}>
-                    <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "2rem", fontWeight: 700, color: "hsl(var(--gold) / 0.35)", lineHeight: 1 }}>
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "hsl(var(--gold) / 0.12)", border: "1px solid hsl(var(--gold) / 0.25)" }}>
-                      <Icon className="h-5 w-5" style={{ color: "hsl(var(--gold))" }} />
+                <div key={i} className={`flex items-stretch gap-0 rounded-2xl overflow-hidden border border-border animate-fade-in-up ${isEven ? "flex-row" : "flex-row-reverse"}`} style={{ animationDelay: `${i * 0.05}s`, minHeight: "120px" }}>
+                  {img && (
+                    <div className="flex-shrink-0" style={{ width: "180px" }}>
+                      <img src={img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </div>
-                  </div>
+                  )}
                   <div className="flex-1 px-7 py-5 bg-card flex flex-col justify-center">
                     <h3 className="mb-1.5" style={{ fontSize: "1rem", fontWeight: 700, color: "hsl(var(--navy-deep))" }}>{item.title}</h3>
                     <p style={{ fontSize: "0.875rem", color: "hsl(var(--muted-foreground))", lineHeight: 1.7 }}>{item.desc}</p>
                   </div>
-                  {img && (
-                    <div className="flex-shrink-0 hidden sm:block" style={{ width: "200px" }}>
-                      <img src={img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    </div>
-                  )}
                 </div>
               );
             })}
