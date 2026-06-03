@@ -18,11 +18,8 @@ import r10Img from "@assets/WhatsApp_Image_2026-04-08_at_12.21.26_PM_17759830766
 
 const reasonImages = [r3Img, r2Img, r8Img, r10Img, r0Img, r1Img, r9Img, r6Img, r4Img, r7Img, r5Img];
 import {
-  BookOpen, Users, Shield, ListOrdered, Search, UserCheck,
-  MessageCircle, Cloud, CreditCard, Globe, BarChart3, Check,
-  ArrowRight, X, Loader2, ChevronDown, ChevronUp, Play,
-  Megaphone, FileText, HelpCircle, Send, MessageSquare,
-  AlertTriangle,
+  BookOpen, Check, ArrowRight, X, Loader2, ChevronDown, ChevronUp, Play,
+  Megaphone, FileText, HelpCircle, MessageSquare, AlertTriangle, Send,
 } from "lucide-react";
 const LinkedinIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
@@ -44,22 +41,17 @@ const CURRENCIES = [
 ];
 
 
+const WEBHOOK_URL = import.meta.env.VITE_CHATBOT_WEBHOOK_URL as string;
+
 const LandingPage: React.FC = () => {
   const { t, lang } = useLang();
   const [currency, setCurrency] = useState("SAR");
   const [showArticle, setShowArticle] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ from: "bot" | "user"; text: string }[]>([
-    { from: "bot", text: lang === "ar" ? "مرحبًا بك في Co-Research كيف يمكنني مساعدتك؟" : "Welcome to Co-Research! How can I help you?" },
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatOpen, setChatOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [complaintsOpen, setComplaintsOpen] = useState(false);
   const [advertiseOpen, setAdvertiseOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<string | null>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
 
@@ -71,25 +63,19 @@ const LandingPage: React.FC = () => {
     return val < 1 ? val.toFixed(2) : Math.round(val).toString();
   };
 
-  const apiCall = async (endpoint: string, body: object) => {
-    const res = await fetch(`/api/${endpoint}`, {
+  // Forms post to the n8n webhook with a `formType` tag so the workflow
+  // can route emails/notifications based on type.
+  const apiCall = async (formType: string, body: object) => {
+    if (!WEBHOOK_URL) throw new Error("Webhook URL not configured");
+    const res = await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ formType, lang, ...body }),
     });
-    if (!res.ok) throw new Error("Failed");
-    return res.json();
-  };
-
-  const handleChatSend = () => {
-    if (!chatInput.trim()) return;
-    const msg = chatInput.trim();
-    setChatInput("");
-    setChatMessages(prev => [
-      ...prev,
-      { from: "user", text: msg },
-      { from: "bot", text: lang === "ar" ? "شكرًا على رسالتك. سيتواصل معك فريق الدعم قريبًا." : "Thank you for your message. Our support team will get back to you soon." },
-    ]);
+    if (!res.ok) throw new Error(`Submit failed (${res.status})`);
+    return res.headers.get("content-type")?.includes("application/json")
+      ? res.json()
+      : { ok: true };
   };
 
   return (
@@ -242,6 +228,8 @@ const LandingPage: React.FC = () => {
               cta={t("pricing.startFree") as string}
               highlighted={false}
               onClick={() => { setSelectedPlan("free"); window.location.href = "/register"; }}
+              freeLabel={lang === "ar" ? "مجاني" : "Free"}
+              yearLabel={lang === "ar" ? "سنويًا" : "year"}
             />
             <PricingCard
               name={t("pricing.researcher.name") as string}
@@ -253,6 +241,8 @@ const LandingPage: React.FC = () => {
               highlighted={true}
               badge={lang === "ar" ? "الأكثر طلبًا" : "Most Popular"}
               onClick={() => { setSelectedPlan("researcher"); setSubscribeOpen(true); }}
+              freeLabel={lang === "ar" ? "مجاني" : "Free"}
+              yearLabel={lang === "ar" ? "سنويًا" : "year"}
             />
             <PricingCard
               name={t("pricing.institution.name") as string}
@@ -263,6 +253,8 @@ const LandingPage: React.FC = () => {
               cta={t("pricing.contactUs") as string}
               highlighted={false}
               onClick={() => { setSelectedPlan("institution"); setContactOpen(true); }}
+              freeLabel={lang === "ar" ? "مجاني" : "Free"}
+              yearLabel={lang === "ar" ? "سنويًا" : "year"}
             />
           </div>
           <p className="text-center text-xs text-muted-foreground mt-6">
@@ -386,20 +378,20 @@ const LandingPage: React.FC = () => {
               {
                 icon: MessageSquare,
                 title: lang === "ar" ? "الاستفسارات" : "Inquiries",
-                desc: lang === "ar" ? "تواصل مع فريق الدعم عبر المحادثة الفورية" : "Chat with our support team instantly",
-                action: () => { setChatOpen(true); setHelpOpen(false); },
+                desc: lang === "ar" ? "افتح المحادثة في أسفل الشاشة" : "Open the chat at the bottom of the screen",
+                action: () => { /* opens the global ChatbotWidget */ },
               },
               {
                 icon: AlertTriangle,
                 title: lang === "ar" ? "الشكاوى" : "Complaints",
                 desc: lang === "ar" ? "الإبلاغ عن انتهاك حقوق الملكية الفكرية" : "Report intellectual property infringement",
-                action: () => { setComplaintsOpen(true); setHelpOpen(false); },
+                action: () => { setComplaintsOpen(true); },
               },
               {
                 icon: Send,
                 title: lang === "ar" ? "أخرى" : "Other",
                 desc: lang === "ar" ? "راسلنا لأي استفسار آخر" : "Contact us for any other inquiry",
-                action: () => { setContactOpen(true); setHelpOpen(false); },
+                action: () => { setContactOpen(true); },
               },
             ].map((card, i) => (
               <button key={i} onClick={card.action} className="rounded-xl p-5 text-start transition-all hover:-translate-y-1 group" style={{ background: "hsl(var(--cream) / 0.04)", border: "1px solid hsl(var(--cream) / 0.1)" }}>
@@ -480,37 +472,6 @@ const LandingPage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Chat Modal */}
-      {chatOpen && (
-        <div className="fixed bottom-6 end-6 z-50 w-80 rounded-2xl border border-border bg-white shadow-2xl overflow-hidden animate-scale-in" style={{ boxShadow: "0 8px 40px hsl(222 25% 12% / 0.2)" }}>
-          <div className="flex items-center justify-between px-4 py-3" style={{ background: "hsl(var(--navy-deep))" }}>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "hsl(var(--gold))", color: "hsl(var(--navy-deep))" }}>CR</div>
-              <span className="text-sm font-semibold" style={{ color: "hsl(var(--cream))" }}>Co-Research Support</span>
-            </div>
-            <button onClick={() => setChatOpen(false)} className="text-white/60 hover:text-white"><X className="h-4 w-4" /></button>
-          </div>
-          <div className="h-48 overflow-y-auto p-3 space-y-2" style={{ background: "hsl(var(--background))" }}>
-            {chatMessages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs ${m.from === "user" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 p-3 border-t border-border">
-            <input
-              className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              placeholder={lang === "ar" ? "اكتب رسالتك..." : "Type a message..."}
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") handleChatSend(); }}
-            />
-            <button onClick={handleChatSend} className="rounded-lg bg-primary px-3 py-2 text-primary-foreground"><Send className="h-4 w-4" /></button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -678,7 +639,8 @@ const ComplaintsForm: React.FC<{ lang: string; apiCall: Function; onClose: () =>
 const PricingCard: React.FC<{
   name: string; price: string; currency: string; currencyLabel: string;
   features: string[]; cta: string; highlighted: boolean; badge?: string; onClick: () => void;
-}> = ({ name, price, currency, currencyLabel, features, cta, highlighted, badge, onClick }) => (
+  freeLabel: string; yearLabel: string;
+}> = ({ name, price, currencyLabel, features, cta, highlighted, badge, onClick, freeLabel, yearLabel }) => (
   <div className="relative rounded-xl p-7 flex flex-col transition-transform duration-300 hover:-translate-y-1"
     style={highlighted
       ? { background: "white", border: "1.5px solid hsl(var(--gold) / 0.5)", boxShadow: "0 8px 40px hsl(0 0% 0% / 0.12), 0 2px 8px hsl(42 85% 50% / 0.2)" }
@@ -695,7 +657,7 @@ const PricingCard: React.FC<{
       <span style={{ fontSize: "2.25rem", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.02em", color: highlighted ? "hsl(var(--navy-deep))" : "hsl(var(--foreground))" }}>{price}</span>
       <span className="ms-1.5 text-sm font-semibold" style={{ color: "hsl(var(--muted-foreground))" }}>{currencyLabel}</span>
     </div>
-    <p className="text-xs text-muted-foreground mb-6">/ {price === "0" ? (currency === "SAR" ? "مجاني" : "Free") : "year"}</p>
+    <p className="text-xs text-muted-foreground mb-6">/ {price === "0" ? freeLabel : yearLabel}</p>
     <ul className="space-y-3 mb-8 flex-1">
       {features.map((f, i) => (
         <li key={i} className="flex items-start gap-2.5 text-sm">

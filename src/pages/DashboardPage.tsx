@@ -200,7 +200,18 @@ const DashboardPage: React.FC = () => {
             {filtered.length === 0 ? (
               <div className="text-center py-20">
                 <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-heading text-xl font-semibold">{t('dashboard.noResults')}</h3>
+                <h3 className="font-heading text-xl font-semibold mb-2">
+                  {discoverProjects.length === 0
+                    ? (lang === 'ar' ? 'لا توجد فرق متاحة للانضمام بعد' : 'No teams available to join yet')
+                    : t('dashboard.noResults')}
+                </h3>
+                {discoverProjects.length === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {lang === 'ar'
+                      ? 'كن أول من ينشئ فريقًا بحثيًا!'
+                      : 'Be the first to create a research team!'}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
