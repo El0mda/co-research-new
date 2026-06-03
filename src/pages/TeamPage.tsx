@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
+import { supabase } from "@/lib/supabase";
+import {
+  createTask as dbCreateTask,
+  updateTaskStatus as dbUpdateTaskStatus,
+  sendMessage as dbSendMessage,
+} from "@/lib/queries";
+import { toast } from "sonner";
 import {
   ChevronUp,
   ChevronDown,
@@ -18,13 +26,19 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TaskStatus = "in-progress" | "under-review" | "completed";
 
-// ─── Helper: generate IDs ─────────────────────────────────────────────────────
-const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
+// NOTE: Author re-ordering uses local state only — schema would need an
+// order_index column on project_members to persist.
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t, lang } = useLang();
-  const { allProjects, allResearchers, setProjects } = useApp();
+  const { allProjects, allResearchers, setProjects, refreshProjects, user } =
+    useApp();
+  const { session } = useAuth();
+
+  useEffect(() => {
+    if (!session) navigate("/signin");
+  }, [session, navigate]);
 
   const [activeTab, setActiveTab] = useState(0);
 
@@ -49,6 +63,31 @@ const TeamPage: React.FC = () => {
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
 
   const project = allProjects.find((p) => p.id === id);
+
+  // ── Auto-scroll chat ────────────────────────────────────────────────────────
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [project?.messages]);
+
+  // ── Realtime: refresh on messages/tasks changes for this project ───────────
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`project:${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `project_id=eq.${id}` },
+        () => { void refreshProjects(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks", filter: `project_id=eq.${id}` },
+        () => { void refreshProjects(); },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [id, refreshProjects]);
+
   if (!project)
     return (
       <div className="min-h-screen bg-background">
@@ -90,41 +129,38 @@ const TeamPage: React.FC = () => {
     );
   };
 
-  // ── Auto-scroll chat ────────────────────────────────────────────────────────
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [project.messages]);
-
   // ── Send message ────────────────────────────────────────────────────────────
-  const sendMessage = () => {
+  const sendMessage = async () => {
+    if (!id) return;
     if (!newMsg.trim() && !attachedFile) return;
-    const newMessage: any = {
-      id: `m${uid()}`,
-      senderId: "r1",
-      text: newMsg || (attachedFile ? attachedFile.name : ""),
-      textEn: newMsg || (attachedFile ? attachedFile.name : ""),
-      timestamp: new Date().toISOString(),
-    };
-    if (attachedFile) {
-      newMessage.attachment = {
-        name: attachedFile.name,
-        type: attachedFile.name.split(".").pop()?.toLowerCase() ?? "file",
-      };
-    }
-    // If there's a real file, create a blob URL and save it
-    if (attachedFile) {
-      const url = URL.createObjectURL(attachedFile);
-      setFileUrls((prev) => ({ ...prev, [newMessage.id]: url }));
-    }
+    const textValue = newMsg || (attachedFile ? attachedFile.name : "");
+    const attachment = attachedFile
+      ? {
+          name: attachedFile.name,
+          type: attachedFile.name.split(".").pop()?.toLowerCase() ?? "file",
+        }
+      : undefined;
 
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, messages: [...p.messages, newMessage] } : p,
-      ),
-    );
-    setNewMsg("");
-    setAttachedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    try {
+      const messageId = await dbSendMessage({
+        projectId: id,
+        senderId: user.id,
+        text: textValue,
+        textEn: textValue,
+        attachment,
+      });
+      if (attachedFile) {
+        const url = URL.createObjectURL(attachedFile);
+        setFileUrls((prev) => ({ ...prev, [messageId]: url }));
+      }
+      setNewMsg("");
+      setAttachedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      // realtime sub will update; refresh as a fallback
+      await refreshProjects();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -135,27 +171,31 @@ const TeamPage: React.FC = () => {
   };
 
   // ── Create task ─────────────────────────────────────────────────────────────
-  const createTask = () => {
-    if (!newTaskTitle.trim()) return;
-    const task = {
-      id: `t${uid()}`,
-      title: newTaskTitle,
-      titleEn: newTaskTitle,
-      description: newTaskDesc,
-      descriptionEn: newTaskDesc,
-      assigneeId: newTaskAssignee || (members[0]?.id ?? ""),
-      dueDate: newTaskDue || new Date().toISOString().slice(0, 10),
-      status: newTaskStatus,
-    };
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, tasks: [...p.tasks, task] } : p)),
-    );
-    setShowNewTask(false);
-    setNewTaskTitle("");
-    setNewTaskDesc("");
-    setNewTaskAssignee("");
-    setNewTaskDue("");
-    setNewTaskStatus("in-progress");
+  const createTask = async () => {
+    if (!id || !newTaskTitle.trim()) return;
+    try {
+      const newId = await dbCreateTask({
+        projectId: id,
+        title: newTaskTitle,
+        titleEn: newTaskTitle,
+        description: newTaskDesc,
+        descriptionEn: newTaskDesc,
+        assigneeId: newTaskAssignee || (members[0]?.id ?? undefined),
+        dueDate: newTaskDue || new Date().toISOString().slice(0, 10),
+      });
+      if (newTaskStatus !== "in-progress") {
+        await dbUpdateTaskStatus(newId, newTaskStatus);
+      }
+      await refreshProjects();
+      setShowNewTask(false);
+      setNewTaskTitle("");
+      setNewTaskDesc("");
+      setNewTaskAssignee("");
+      setNewTaskDue("");
+      setNewTaskStatus("in-progress");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create task");
+    }
   };
 
   // ── Drag handlers ───────────────────────────────────────────────────────────
@@ -165,15 +205,17 @@ const TeamPage: React.FC = () => {
     setDragOverCol(null);
   };
 
-  const onDropColumn = (status: TaskStatus) => {
+  const onDropColumn = async (status: TaskStatus) => {
     if (!draggingTaskId) return;
+    const taskId = draggingTaskId;
+    // optimistic update
     setProjects((prev) =>
       prev.map((p) =>
         p.id === id
           ? {
               ...p,
               tasks: p.tasks.map((tk) =>
-                tk.id === draggingTaskId ? { ...tk, status } : tk,
+                tk.id === taskId ? { ...tk, status } : tk,
               ),
             }
           : p,
@@ -181,6 +223,12 @@ const TeamPage: React.FC = () => {
     );
     setDraggingTaskId(null);
     setDragOverCol(null);
+    try {
+      await dbUpdateTaskStatus(taskId, status);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update task");
+      await refreshProjects();
+    }
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────────

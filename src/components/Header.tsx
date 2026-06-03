@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Bell, Menu, X, User, LogOut, ChevronDown } from "lucide-react";
 
 const Header: React.FC = () => {
   const { t, toggleLang, lang } = useLang();
-  const { isLoggedIn, setIsLoggedIn, user } = useApp();
+  const { isLoggedIn, user } = useApp();
+  const { signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -155,8 +157,8 @@ const Header: React.FC = () => {
                       {t("nav.myProfile")}
                     </Link>
                     <button
-                      onClick={() => {
-                        setIsLoggedIn(false);
+                      onClick={async () => {
+                        await signOut();
                         setDropdownOpen(false);
                         navigate("/");
                       }}
@@ -173,10 +175,7 @@ const Header: React.FC = () => {
           ) : (
             <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  setIsLoggedIn(true);
-                  navigate("/dashboard");
-                }}
+                onClick={() => navigate("/signin")}
                 className="text-sm font-medium transition-colors"
                 style={{ color: "hsl(var(--navy) / 0.65)" }}
                 onMouseEnter={(e) =>
@@ -248,8 +247,7 @@ const Header: React.FC = () => {
             <>
               <button
                 onClick={() => {
-                  setIsLoggedIn(true);
-                  navigate("/dashboard");
+                  navigate("/signin");
                   setMobileOpen(false);
                 }}
                 className="block w-full text-start px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors"
@@ -273,8 +271,8 @@ const Header: React.FC = () => {
                 onClick={() => setMobileOpen(false)}
               />
               <button
-                onClick={() => {
-                  setIsLoggedIn(false);
+                onClick={async () => {
+                  await signOut();
                   setMobileOpen(false);
                   navigate("/");
                 }}

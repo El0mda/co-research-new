@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLang } from '@/contexts/LanguageContext';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import { showToast } from '@/components/ToastHelper';
 import { Plus, Search, Users, Calendar, X } from 'lucide-react';
+import { createProject, joinProject } from '@/lib/queries';
+import { toast } from 'sonner';
 
 const DashboardPage: React.FC = () => {
   const { t, lang } = useLang();
-  const { allProjects, user, allResearchers, setProjects } = useApp();
+  const { allProjects, user, refreshProjects } = useApp();
+  const { session } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'mine' | 'discover'>('mine');
   const [search, setSearch] = useState('');
   const [joinedIds, setJoinedIds] = useState<string[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  React.useEffect(() => {
+    if (!session) navigate('/signin');
+  }, [session, navigate]);
 
   // Create team form state
   const [newTitle, setNewTitle] = useState('');
@@ -46,7 +56,7 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleCreateTeam = () => {
+  const handleCreateTeam = async () => {
     const errs: Record<string, string> = {};
     if (!newTitle.trim()) errs.title = t('register.errors.required');
     if (!newTitleEn.trim()) errs.titleEn = t('register.errors.required');
@@ -56,38 +66,48 @@ const DashboardPage: React.FC = () => {
     setCreateErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const newProject = {
-      id: `p${Date.now()}`,
-      title: newTitle,
-      titleEn: newTitleEn,
-      description: newDesc,
-      descriptionEn: newDescEn,
-      field: newField,
-      fieldEn: newField,
-      subField: newSubField,
-      subFieldEn: newSubField,
-      interests: [],
-      interestsEn: [],
-      type: newType,
-      status: 'idea' as const,
-      startDate: newStartDate,
-      endDate: newEndDate,
-      maxMembers: parseInt(newMaxMembers) || 4,
-      members: [user.id],
-      leaderId: user.id,
-      completion: 0,
-      tasks: [],
-      messages: [],
-    };
+    setCreating(true);
+    try {
+      await createProject({
+        title: newTitle,
+        titleEn: newTitleEn,
+        description: newDesc,
+        descriptionEn: newDescEn,
+        field: newField,
+        fieldEn: newField,
+        subField: newSubField,
+        subFieldEn: newSubField,
+        interests: [],
+        interestsEn: [],
+        type: newType,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        maxMembers: parseInt(newMaxMembers) || 4,
+        leaderId: user.id,
+      });
+      await refreshProjects();
+      showToast(t('createTeamModal.created'));
+      setShowCreateModal(false);
+      setNewTitle(''); setNewTitleEn(''); setNewDesc(''); setNewDescEn('');
+      setNewField(''); setNewSubField(''); setNewType('empirical');
+      setNewMaxMembers('4'); setNewStartDate(''); setNewEndDate('');
+      setCreateErrors({});
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create project');
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    setProjects(prev => [...prev, newProject]);
-    showToast(t('createTeamModal.created'));
-    setShowCreateModal(false);
-    // Reset form
-    setNewTitle(''); setNewTitleEn(''); setNewDesc(''); setNewDescEn('');
-    setNewField(''); setNewSubField(''); setNewType('empirical');
-    setNewMaxMembers('4'); setNewStartDate(''); setNewEndDate('');
-    setCreateErrors({});
+  const handleJoin = async (projectId: string) => {
+    try {
+      await joinProject(projectId, user.id);
+      setJoinedIds([...joinedIds, projectId]);
+      await refreshProjects();
+      showToast(t('toast.requestSent'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to join project');
+    }
   };
 
   return (
@@ -210,7 +230,7 @@ const DashboardPage: React.FC = () => {
                         </span>
                         <button
                           disabled={joined}
-                          onClick={() => { setJoinedIds([...joinedIds, p.id]); showToast(t('toast.requestSent')); }}
+                          onClick={() => handleJoin(p.id)}
                           className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
                             joined
                               ? 'bg-secondary text-muted-foreground cursor-default'
@@ -285,9 +305,10 @@ const DashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={handleCreateTeam}
-                className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity mt-2"
+                disabled={creating}
+                className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity mt-2 disabled:opacity-50"
               >
-                {t('createTeamModal.create')}
+                {creating ? '…' : t('createTeamModal.create')}
               </button>
             </div>
           </div>

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
-import { useApp } from "@/contexts/AppContext";
 import Header from "@/components/Header";
+import { supabase } from "@/lib/supabase";
 import { Upload, X, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Academic domain validation ───────────────────────────────────────────────
 const ACADEMIC_DOMAIN_PATTERNS = [
@@ -33,10 +34,11 @@ const toBase64 = (file: File): Promise<string> =>
 // ─── Component ────────────────────────────────────────────────────────────────
 const RegisterPage: React.FC = () => {
   const { t } = useLang();
-  const { setIsLoggedIn } = useApp();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [emailConfirmRequired, setEmailConfirmRequired] = useState(false);
 
   // Pull arrays from translation file — keys match the active locale automatically
   const steps = t("register.steps") as unknown as string[];
@@ -82,9 +84,6 @@ const RegisterPage: React.FC = () => {
   // ── Step 4 ──────────────────────────────────────────────────────────────────
   const [langPref, setLangPref] = useState<"ar" | "en">("ar");
   const [actionPref, setActionPref] = useState<"create" | "find" | "">("");
-
-  // ── Verification ─────────────────────────────────────────────────────────────
-  const [verificationCode, setVerificationCode] = useState("");
 
   // ── Errors ────────────────────────────────────────────────────────────────────
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -149,22 +148,58 @@ const RegisterPage: React.FC = () => {
       if (!faculty.trim()) errs.faculty = req;
     }
 
-    if (s === 4) {
-      if (verificationCode.length < 6) errs.verificationCode = req;
-    }
-
     setErrors(errs);
     return Object.keys(errs).length === 0;
+  };
+
+  const submitSignUp = async () => {
+    setSubmitting(true);
+    const resolvedSubField = isOtherSubField ? subFieldOther.trim() : subField;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: fullName,
+          name_en: displayName || fullName,
+          degree,
+          university,
+          faculty,
+          field,
+          sub_field: resolvedSubField,
+          interests,
+          interests_en: interests,
+          orcid: orcid || null,
+          scholar: scholar || null,
+          scopus: scopus || null,
+          avatar: profilePhoto || "",
+          country,
+          national_id: nationalId,
+          lang_pref: langPref,
+        },
+      },
+    });
+    setSubmitting(false);
+    if (error) {
+      toast.error(t("register.errors.signupFailed") as string || "Sign-up failed", {
+        description: error.message,
+      });
+      return;
+    }
+    if (data.session) {
+      navigate("/dashboard");
+    } else {
+      setEmailConfirmRequired(true);
+      setStep(4);
+    }
   };
 
   const handleNext = () => {
     if (!validate(step)) return;
     if (step === 3) {
-      // TODO: call send-verification-email API here
-      setStep(4);
+      void submitSignUp();
     } else if (step === 4) {
-      setIsLoggedIn(true);
-      navigate("/dashboard");
+      navigate("/signin");
     } else {
       setStep((s) => s + 1);
     }
@@ -717,33 +752,17 @@ const RegisterPage: React.FC = () => {
                 {t("register.verify.sentTo") as string}{" "}
                 <strong className="text-foreground">{email}</strong>
               </p>
+              {emailConfirmRequired && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Open the link in your email to activate your account, then sign in.
+                </p>
+              )}
               {emailType === "non-academic" && (
                 <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
                   {t("register.verify.pendingManualReview") as string}
                 </p>
               )}
             </div>
-            <FormField
-              label={t("register.verify.codeLabel") as string}
-              error={errors.verificationCode}
-            >
-              <input
-                className="form-input text-center tracking-[0.5em] text-lg font-mono"
-                maxLength={6}
-                value={verificationCode}
-                onChange={(e) =>
-                  setVerificationCode(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder="000000"
-              />
-            </FormField>
-            <button
-              type="button"
-              onClick={() => setVerificationCode("")}
-              className="text-xs text-primary underline underline-offset-2 hover:opacity-75 transition-opacity"
-            >
-              {t("register.verify.resend") as string}
-            </button>
           </div>
         )}
 
@@ -763,13 +782,16 @@ const RegisterPage: React.FC = () => {
           <button
             type="button"
             onClick={handleNext}
-            className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+            disabled={submitting}
+            className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {step === 4
-              ? (t("register.submit") as string)
-              : step === 3
-                ? (t("register.sendVerification") as string)
-                : (t("register.next") as string)}
+            {submitting
+              ? "…"
+              : step === 4
+                ? (t("register.submit") as string)
+                : step === 3
+                  ? (t("register.sendVerification") as string)
+                  : (t("register.next") as string)}
           </button>
         </div>
       </div>
