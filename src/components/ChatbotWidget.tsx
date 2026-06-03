@@ -8,6 +8,7 @@ interface ChatMessage {
   text: string;
 }
 
+// bla
 const WEBHOOK_URL = import.meta.env.VITE_CHATBOT_WEBHOOK_URL as string;
 const SESSION_KEY = "chatbot_session_id";
 
@@ -26,7 +27,14 @@ const extractReply = (data: unknown): string => {
   if (typeof data === "string") return data;
   if (!data || typeof data !== "object") return "";
   const o = data as Record<string, unknown>;
-  for (const key of ["reply", "output", "message", "text", "response", "answer"]) {
+  for (const key of [
+    "reply",
+    "output",
+    "message",
+    "text",
+    "response",
+    "answer",
+  ]) {
     const v = o[key];
     if (typeof v === "string" && v.trim()) return v;
   }
@@ -42,9 +50,7 @@ const ChatbotWidget: React.FC = () => {
     {
       id: "welcome",
       role: "bot",
-      text: ar
-        ? "مرحبًا! كيف يمكنني مساعدتك؟"
-        : "Hi! How can I help you?",
+      text: ar ? "مرحبًا! كيف يمكنني مساعدتك؟" : "Hi! How can I help you?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -77,9 +83,11 @@ const ChatbotWidget: React.FC = () => {
         }),
       });
       const ct = res.headers.get("content-type") ?? "";
-      const data = ct.includes("application/json") ? await res.json() : await res.text();
-      const reply = extractReply(data) ||
-        (ar ? "تم استلام رسالتك." : "Got your message.");
+      const data = ct.includes("application/json")
+        ? await res.json()
+        : await res.text();
+      const reply =
+        extractReply(data) || (ar ? "تم استلام رسالتك." : "Got your message.");
       setMessages((prev) => [
         ...prev,
         { id: `b-${Date.now()}`, role: "bot", text: reply },
