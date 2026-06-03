@@ -93,7 +93,13 @@ const DashboardPage: React.FC = () => {
       setNewMaxMembers('4'); setNewStartDate(''); setNewEndDate('');
       setCreateErrors({});
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create project');
+      // Surface the actual Supabase error so we can debug
+      const msg =
+        (err as { message?: string; details?: string; hint?: string; code?: string })
+          ?.message ||
+        (typeof err === 'string' ? err : JSON.stringify(err));
+      console.error('[createProject] error:', err);
+      toast.error('Create project failed: ' + msg);
     } finally {
       setCreating(false);
     }

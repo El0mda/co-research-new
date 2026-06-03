@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/LanguageContext";
 import { useApp } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bell, Menu, X, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown } from "lucide-react";
 
 const Header: React.FC = () => {
   const { t, toggleLang, lang } = useLang();
@@ -76,17 +76,6 @@ const Header: React.FC = () => {
 
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
-              {/* Bell */}
-              <button className="relative p-1.5 rounded-md hover:bg-secondary transition-colors">
-                <Bell
-                  className="h-[18px] w-[18px]"
-                  style={{ color: "hsl(var(--navy) / 0.5)" }}
-                />
-                <span
-                  className="absolute top-1 end-1 h-2 w-2 rounded-full"
-                  style={{ background: "hsl(4 72% 50%)" }}
-                />
-              </button>
 
               {/* User dropdown */}
               <div className="relative">

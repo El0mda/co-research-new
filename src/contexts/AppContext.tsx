@@ -1,13 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  researchers as mockResearchers,
-  projects as mockProjects,
-  currentUser as mockUser,
-  type Researcher,
-  type ResearchProject,
-} from "@/data/mockData";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { Researcher, ResearchProject } from "@/data/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  createResearcherProfile,
   fetchMyResearcher,
   fetchProjects,
   fetchResearchers,
@@ -26,17 +21,86 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+const STUB_USER: Researcher = {
+  id: "",
+  name: "",
+  nameEn: "",
+  email: "",
+  avatar: "",
+  degree: "",
+  degreeEn: "",
+  university: "",
+  universityEn: "",
+  faculty: "",
+  facultyEn: "",
+  field: "",
+  fieldEn: "",
+  subField: "",
+  subFieldEn: "",
+  interests: [],
+  interestsEn: [],
+};
+
+const userFromAuthMeta = (
+  authId: string,
+  email: string,
+  meta: Record<string, unknown>,
+): Researcher => {
+  const s = (k: string, fallback = ""): string => {
+    const v = meta[k];
+    return typeof v === "string" ? v : fallback;
+  };
+  const arr = (k: string): string[] => {
+    const v = meta[k];
+    return Array.isArray(v) ? (v as string[]) : [];
+  };
+  return {
+    id: authId,
+    name: s("name"),
+    nameEn: s("name_en", s("name")),
+    email,
+    avatar: s("avatar"),
+    degree: s("degree"),
+    degreeEn: s("degree_en", s("degree")),
+    university: s("university"),
+    universityEn: s("university_en", s("university")),
+    faculty: s("faculty"),
+    facultyEn: s("faculty_en", s("faculty")),
+    field: s("field"),
+    fieldEn: s("field_en", s("field")),
+    subField: s("sub_field"),
+    subFieldEn: s("sub_field_en", s("sub_field")),
+    interests: arr("interests"),
+    interestsEn: arr("interests_en").length > 0 ? arr("interests_en") : arr("interests"),
+    orcid: s("orcid") || undefined,
+    scholar: s("scholar") || undefined,
+    scopus: s("scopus") || undefined,
+  };
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { user: authUser, loading: authLoading } = useAuth();
-  const [user, setUser] = useState<Researcher>(mockUser);
-  const [allResearchers, setAllResearchers] =
-    useState<Researcher[]>(mockResearchers);
-  const [allProjects, setProjects] =
-    useState<ResearchProject[]>(mockProjects);
+  const [profile, setProfile] = useState<Researcher | null>(null);
+  const [allResearchers, setAllResearchers] = useState<Researcher[]>([]);
+  const [allProjects, setProjects] = useState<ResearchProject[]>([]);
   const [loading, setLoading] = useState(false);
   const isLoggedIn = !!authUser;
+
+  // user is ALWAYS keyed by the real auth.uid — DB profile if available,
+  // otherwise synthesized from auth.user_metadata. Never falls back to mocks.
+  const user: Researcher = useMemo(() => {
+    if (profile) return profile;
+    if (authUser) {
+      return userFromAuthMeta(
+        authUser.id,
+        authUser.email ?? "",
+        (authUser.user_metadata ?? {}) as Record<string, unknown>,
+      );
+    }
+    return STUB_USER;
+  }, [profile, authUser]);
 
   const refreshProjects = async () => {
     try {
@@ -51,9 +115,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (authLoading) return;
 
     if (!authUser) {
-      setUser(mockUser);
-      setAllResearchers(mockResearchers);
-      setProjects(mockProjects);
+      setProfile(null);
+      setAllResearchers([]);
+      setProjects([]);
       return;
     }
 
@@ -67,7 +131,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           fetchProjects(),
         ]);
         if (cancelled) return;
-        if (me) setUser(me);
+        if (me) {
+          setProfile(me);
+        } else {
+          // No researcher row exists yet — the handle_new_user trigger may
+          // not have run (e.g. signup happened before the trigger was added).
+          // Create the row from auth metadata so create-project + RLS work.
+          const seed = userFromAuthMeta(
+            authUser.id,
+            authUser.email ?? "",
+            (authUser.user_metadata ?? {}) as Record<string, unknown>,
+          );
+          try {
+            await createResearcherProfile({
+              id: seed.id,
+              name: seed.name,
+              nameEn: seed.nameEn,
+              email: seed.email,
+              degree: seed.degree,
+              degreeEn: seed.degreeEn,
+              university: seed.university,
+              universityEn: seed.universityEn,
+              faculty: seed.faculty,
+              facultyEn: seed.facultyEn,
+              field: seed.field,
+              fieldEn: seed.fieldEn,
+              subField: seed.subField,
+              subFieldEn: seed.subFieldEn,
+              interests: seed.interests,
+              interestsEn: seed.interestsEn,
+              orcid: seed.orcid,
+              scholar: seed.scholar,
+              scopus: seed.scopus,
+            });
+            const created = await fetchMyResearcher(authUser.id);
+            if (!cancelled && created) setProfile(created);
+          } catch (e) {
+            console.error("[AppContext] auto-create researcher failed", e);
+          }
+        }
         setAllResearchers(rs);
         setProjects(ps);
       } catch (err) {
@@ -82,8 +184,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [authUser, authLoading]);
 
-  // Kept for backwards-compat with pages that still call setIsLoggedIn —
-  // actual login state is derived from the auth session.
+  // Kept for backwards-compat — actual login state is derived from session.
   const setIsLoggedIn = () => {};
 
   return (
